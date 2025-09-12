@@ -19,7 +19,15 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { logout, getUser } from "@/lib/auth";
-import { BarChart3, Home, LogOut, Settings, Users as UsersIcon, CalendarClock, Download } from "lucide-react";
+import {
+  BarChart3,
+  Home,
+  LogOut,
+  Settings,
+  Users as UsersIcon,
+  CalendarClock,
+  Download,
+} from "lucide-react";
 
 export default function MainLayout({
   children,

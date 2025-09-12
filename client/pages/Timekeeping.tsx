@@ -1,12 +1,30 @@
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { exportData } from "@/lib/export";
 import { CalendarClock, Plus } from "lucide-react";
 import { useState } from "react";
 
-interface Entry { id: string; user: string; date: string; hours: number }
+interface Entry {
+  id: string;
+  user: string;
+  date: string;
+  hours: number;
+}
 
 export default function Timekeeping() {
   const [rows, setRows] = useState<Entry[]>([
@@ -17,10 +35,19 @@ export default function Timekeeping() {
 
   const add = () => {
     const id = String(rows.length + 1);
-    setRows([...rows, { id, user: "New Member", date: new Date().toISOString().slice(0,10), hours: 8 }]);
+    setRows([
+      ...rows,
+      {
+        id,
+        user: "New Member",
+        date: new Date().toISOString().slice(0, 10),
+        hours: 8,
+      },
+    ]);
   };
 
-  const exportRows = (format: "csv" | "json") => exportData(rows, "timekeeping", format);
+  const exportRows = (format: "csv" | "json") =>
+    exportData(rows, "timekeeping", format);
 
   return (
     <MainLayout title="Timekeeping Management">
@@ -31,9 +58,16 @@ export default function Timekeeping() {
             <CardDescription>Track hours by user and date</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => exportRows("csv")}>Export CSV</Button>
-            <Button variant="secondary" onClick={() => exportRows("json")}>Export JSON</Button>
-            <Button onClick={add}><Plus className="mr-2" />Add Entry</Button>
+            <Button variant="secondary" onClick={() => exportRows("csv")}>
+              Export CSV
+            </Button>
+            <Button variant="secondary" onClick={() => exportRows("json")}>
+              Export JSON
+            </Button>
+            <Button onClick={add}>
+              <Plus className="mr-2" />
+              Add Entry
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

@@ -1,6 +1,10 @@
 export type ExportFormat = "csv" | "json";
 
-export function downloadBlob(content: BlobPart, filename: string, type: string) {
+export function downloadBlob(
+  content: BlobPart,
+  filename: string,
+  type: string,
+) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -27,9 +31,17 @@ export function toCSV<T extends Record<string, any>>(rows: T[]): string {
   return lines.join("\n");
 }
 
-export function exportData<T extends Record<string, any>>(rows: T[], filename: string, format: ExportFormat) {
+export function exportData<T extends Record<string, any>>(
+  rows: T[],
+  filename: string,
+  format: ExportFormat,
+) {
   if (format === "json") {
-    return downloadBlob(JSON.stringify(rows, null, 2), `${filename}.json`, "application/json");
+    return downloadBlob(
+      JSON.stringify(rows, null, 2),
+      `${filename}.json`,
+      "application/json",
+    );
   }
   const csv = toCSV(rows);
   return downloadBlob(csv, `${filename}.csv`, "text/csv;charset=utf-8;");
