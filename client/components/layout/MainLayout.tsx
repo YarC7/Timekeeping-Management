@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { logout, getUser } from "@/lib/auth";
-import { BarChart3, Home, LogOut, Settings } from "lucide-react";
+import { BarChart3, Home, LogOut, Settings, Users as UsersIcon, CalendarClock, Download } from "lucide-react";
 
 export default function MainLayout({
   children,
@@ -34,6 +34,9 @@ export default function MainLayout({
 
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: Home },
+    { to: "/users", label: "Users", icon: UsersIcon },
+    { to: "/timekeeping", label: "Timekeeping", icon: CalendarClock },
+    { to: "/exports", label: "Exports", icon: Download },
     { to: "/settings", label: "Settings", icon: Settings },
   ];
 
