@@ -10,6 +10,9 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
+import Users from "@/pages/Users";
+import Timekeeping from "@/pages/Timekeeping";
+import Exports from "@/pages/Exports";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +37,30 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <Users />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/timekeeping"
+            element={
+              <ProtectedRoute>
+                <Timekeeping />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exports"
+            element={
+              <ProtectedRoute>
+                <Exports />
               </ProtectedRoute>
             }
           />
