@@ -38,32 +38,33 @@ export default function Index() {
     <div className="min-h-screen grid md:grid-cols-2">
       <div className="hidden md:flex flex-col justify-between p-10 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
         <div className="flex items-center gap-2">
-          <div className="size-9 rounded-md bg-primary/15 grid place-items-center text-primary font-bold">
-            M
-          </div>
-          <span className="text-lg font-semibold">Manage</span>
+          <img
+            src="/logo.png"
+            alt="logo"
+            className="w-10 h-10 rounded-md bg-primary/15 grid place-items-center"
+          />
+          <span className="text-lg font-semibold">Timekeeping Management</span>
         </div>
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight">
-            Simple Management App
+            Timekeeping Management App
           </h1>
           <p className="mt-3 text-muted-foreground max-w-md">
-            Sign in to access your dashboard and settings. Lightweight, fast,
-            and beautiful.
+            Sign in to access your dashboard and manage timekeeping
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Manage Inc.
+          © {new Date().getFullYear()} Hiptech Solution Inc.
         </p>
       </div>
-      <div className="flex items-center justify-center p-6">
-        <Card className="w-full max-w-sm">
+      <div className="flex items-center justify-center p-8 md:p-10">
+        <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Welcome back</CardTitle>
             <CardDescription>Sign in to continue</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <div>
                 <label className="text-sm font-medium" htmlFor="email">
                   Email
@@ -92,7 +93,7 @@ export default function Index() {
               </div>
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full mt-1"
                 disabled={loading || !email || !password}
               >
                 Sign in

@@ -53,9 +53,11 @@ export default function MainLayout({
       <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="size-6 rounded-md bg-primary/15 grid place-items-center text-primary font-bold">
-              M
-            </div>
+            <img
+              src="/logo.png"
+              alt="logo"
+              className="w-8 h-8 rounded-md bg-primary/15 grid place-items-center"
+            />
             <span className="font-semibold">Manage</span>
           </div>
         </SidebarHeader>

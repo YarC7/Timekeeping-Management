@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:client && npm run build:server",
-    "build:client": "vite build",
+    "build:client": "vite build --outDir dist/spa",
     "build:server": "vite build --config vite.config.server.ts",
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
@@ -21,8 +21,11 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "dotenv": "^17.2.1",
+    "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "knex": "^3.1.0",
+    "pg": "^8.16.3",
+    "pg-promise": "^12.1.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -61,7 +64,7 @@
     "@tanstack/react-query": "^5.84.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/node": "^24.2.1",
+    "@types/node": "^24.3.1",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@types/three": "^0.176.0",
@@ -76,6 +79,7 @@
     "framer-motion": "^12.23.12",
     "globals": "^16.3.0",
     "input-otp": "^1.4.2",
+    "knex-cli": "^1.0.1",
     "lucide-react": "^0.539.0",
     "next-themes": "^0.4.6",
     "postcss": "^8.5.6",

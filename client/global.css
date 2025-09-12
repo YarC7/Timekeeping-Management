@@ -12,7 +12,7 @@
    * A different format will require also updating the theme in tailwind.config.ts.
   */
   :root {
-    --background: 210 20% 99%;
+    --background: 205 100% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -21,7 +21,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 258 85% 58%;
+    /* Light sky blue primary */
+    --primary: 205 90% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -30,7 +31,8 @@
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 252 94% 67%;
+    /* Complementary accent slightly lighter than primary */
+    --accent: 205 92% 65%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -38,18 +40,18 @@
 
     --border: 220 13% 90%;
     --input: 220 13% 90%;
-    --ring: 258 85% 58%;
+    --ring: 205 90% 55%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 258 85% 58%;
+    --sidebar-primary: 205 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 258 85% 58%;
+    --sidebar-ring: 205 90% 55%;
   }
 
   .dark {
@@ -62,7 +64,8 @@
     --popover: 240 10% 6%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 258 85% 62%;
+    /* Dark mode blue primary */
+    --primary: 205 90% 60%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 6% 12%;
@@ -71,7 +74,7 @@
     --muted: 240 6% 12%;
     --muted-foreground: 217 20% 65%;
 
-    --accent: 258 85% 62%;
+    --accent: 205 90% 62%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 30%;
@@ -79,16 +82,16 @@
 
     --border: 240 6% 14%;
     --input: 240 6% 14%;
-    --ring: 258 85% 62%;
+    --ring: 205 90% 60%;
 
     --sidebar-background: 240 6% 10%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 258 85% 62%;
+    --sidebar-primary: 205 90% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 6% 14%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 240 6% 14%;
-    --sidebar-ring: 258 85% 62%;
+    --sidebar-ring: 205 90% 60%;
   }
 }
 
