@@ -1,5 +1,11 @@
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Users, CheckCircle2, Plus } from "lucide-react";
 
@@ -45,21 +51,42 @@ export default function Dashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest updates across your workspace</CardDescription>
+            <CardDescription>
+              Latest updates across your workspace
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
               {[
-                { title: "New user invited", detail: "sarah@company.com", time: "2h ago" },
-                { title: "Project archived", detail: "Mobile Redesign", time: "5h ago" },
-                { title: "Task completed", detail: "Q3 planning deck", time: "1d ago" },
+                {
+                  title: "New user invited",
+                  detail: "sarah@company.com",
+                  time: "2h ago",
+                },
+                {
+                  title: "Project archived",
+                  detail: "Mobile Redesign",
+                  time: "5h ago",
+                },
+                {
+                  title: "Task completed",
+                  detail: "Q3 planning deck",
+                  time: "1d ago",
+                },
               ].map((item, i) => (
-                <li key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                <li
+                  key={i}
+                  className="flex items-center justify-between py-2 border-b last:border-0"
+                >
                   <div>
                     <p className="font-medium">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">{item.detail}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.detail}
+                    </p>
                   </div>
-                  <span className="text-xs text-muted-foreground">{item.time}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {item.time}
+                  </span>
                 </li>
               ))}
             </ul>

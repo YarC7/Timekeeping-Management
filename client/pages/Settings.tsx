@@ -1,5 +1,11 @@
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function Settings() {
@@ -13,9 +19,12 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              This page is a placeholder. Tell me what settings you want (profile fields, password, notifications), and I’ll build them.
+              This page is a placeholder. Tell me what settings you want
+              (profile fields, password, notifications), and I’ll build them.
             </p>
-            <Button className="mt-4" variant="default">Customize Settings</Button>
+            <Button className="mt-4" variant="default">
+              Customize Settings
+            </Button>
           </CardContent>
         </Card>
         <Card>

@@ -21,7 +21,13 @@ import { Button } from "@/components/ui/button";
 import { logout, getUser } from "@/lib/auth";
 import { BarChart3, Home, LogOut, Settings } from "lucide-react";
 
-export default function MainLayout({ children, title }: { children: ReactNode; title?: string }) {
+export default function MainLayout({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title?: string;
+}) {
   const location = useLocation();
   const navigate = useNavigate();
   const user = getUser();
@@ -36,7 +42,9 @@ export default function MainLayout({ children, title }: { children: ReactNode; t
       <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="size-6 rounded-md bg-primary/15 grid place-items-center text-primary font-bold">M</div>
+            <div className="size-6 rounded-md bg-primary/15 grid place-items-center text-primary font-bold">
+              M
+            </div>
             <span className="font-semibold">Manage</span>
           </div>
         </SidebarHeader>
@@ -65,7 +73,9 @@ export default function MainLayout({ children, title }: { children: ReactNode; t
         </SidebarContent>
         <SidebarSeparator />
         <SidebarFooter>
-          <div className="px-2 text-xs text-muted-foreground">{user?.email}</div>
+          <div className="px-2 text-xs text-muted-foreground">
+            {user?.email}
+          </div>
           <Button
             variant="ghost"
             className="justify-start"
