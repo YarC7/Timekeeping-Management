@@ -1,28 +1,54 @@
-// controllers/employeeImage.controller.js
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client } from "../config/s3.js";
+import multer from "multer";
+import crypto from "crypto";
+import path from "path";
+import { EmployeeImageModel } from "server/models/employeeImage.js";
 
-import { EmployeeImageModel } from "../models/employeeImage.js";
+const upload = multer({ storage: multer.memoryStorage() });
 
 export const EmployeeImageController = {
-  async upload(req, res) {
-    if (!req.file) throw { status: 400, message: "No file uploaded" };
+  upload: [
+    upload.single("file"),
+    async (req, res) => {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const url = `/uploads/${req.file.filename}`; // nếu dùng local
-    const employee_id = req.params.id;
+      const ext = path.extname(req.file.originalname);
+      const key = `employees/${req.params.id}/${crypto.randomUUID()}${ext}`;
 
-    const img = await EmployeeImageModel.create(employee_id, url);
-    res.json(img);
-  },
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: "face-attendance",
+          Key: key,
+          Body: req.file.buffer,
+          ContentType: req.file.mimetype,
+        }),
+      );
+      const url = `${s3Client.config.endpoint}face-attendance/${key}`;
 
-  async list(req, res) {
-    const employee_id = req.params.id;
-    const images = await EmployeeImageModel.findByEmployee(employee_id);
+      const img = await EmployeeImageModel.create(req.params.id, url);
+      res.json(img);
+    },
+  ],
+
+  list: async (req, res) => {
+    const images = await EmployeeImageModel.findByEmployee(req.params.id);
     res.json(images);
   },
 
-  async remove(req, res) {
-    const image_id = req.params.image_id;
+  remove: async (req, res) => {
+    const { image_id } = req.params;
     const deleted = await EmployeeImageModel.remove(image_id);
-    if (!deleted) throw { status: 404, message: "Image not found" };
+    if (!deleted) return res.status(404).json({ error: "Not found" });
+
+    const key = deleted.url.split("/face-attendance/")[1];
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: "face-attendance",
+        Key: key,
+      }),
+    );
+
     res.json({ message: "Deleted successfully" });
   },
 };
