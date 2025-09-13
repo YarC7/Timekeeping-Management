@@ -1,7 +1,6 @@
 {
   "name": "fusion-starter",
   "private": true,
-  "type": "module",
   "pkg": {
     "assets": [
       "dist/spa/*"
@@ -12,15 +11,20 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:client && npm run build:server",
+    "build": "npm run build:client && npm run build:server && npm run typecheck",
     "build:client": "vite build --outDir dist/spa",
-    "build:server": "vite build --config vite.config.server.ts",
+    "build:server": "swc src/server -d dist/server --copy-files",
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
-    "typecheck": "tsc"
+    "typecheck": "tsc --noEmit",
+    "migrate:make": "knex migrate:make --knexfile knexfile.js",
+    "migrate:latest": "knex migrate:latest --knexfile knexfile.js",
+    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.js",
+    "seed:run": "knex seed:run --knexfile knexfile.js"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "knex": "^3.1.0",
@@ -59,6 +63,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
+    "@swc/cli": "^0.7.8",
     "@swc/core": "^1.13.3",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-query": "^5.84.2",
@@ -97,6 +102,7 @@
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.176.0",
+    "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
     "vaul": "^1.1.2",

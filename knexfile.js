@@ -1,7 +1,6 @@
-import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+require("dotenv").config({ path: ".env.local" });
 
-export default {
+module.exports = {
   development: {
     client: "pg",
     connection: process.env.DATABASE_URL,

@@ -1,4 +1,4 @@
-export type User = { email: string };
+export type User = { email: string, password: string };
 
 const AUTH_KEY = "app.auth.user";
 
