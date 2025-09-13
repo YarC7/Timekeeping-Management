@@ -10,13 +10,6 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,8 +41,6 @@ export function EmployeeFormDialog({ mode, defaultValues, trigger }: Props) {
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<EmployeeFormData>({
@@ -69,10 +60,7 @@ export function EmployeeFormDialog({ mode, defaultValues, trigger }: Props) {
         await createEmployee.mutateAsync(values);
         toast.success("Employee created successfully ✅");
       } else if (mode === "edit" && defaultValues?.employee_id) {
-        await updateEmployee.mutateAsync({
-          id: defaultValues.employee_id,
-          ...values,
-        });
+        await updateEmployee.mutateAsync({ id: defaultValues.employee_id, ...values });
         toast.success("Employee updated successfully ✨");
       }
       reset();
@@ -96,55 +84,34 @@ export function EmployeeFormDialog({ mode, defaultValues, trigger }: Props) {
           <div>
             <Label htmlFor="full_name">Full Name</Label>
             <Input id="full_name" {...register("full_name")} />
-            {errors.full_name && (
-              <p className="text-red-500">{errors.full_name.message}</p>
-            )}
+            {errors.full_name && <p className="text-red-500">{errors.full_name.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" {...register("email")} />
-            {errors.email && (
-              <p className="text-red-500">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-red-500">{errors.email.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="phone">Phone</Label>
             <Input id="phone" {...register("phone")} />
-            {errors.phone && (
-              <p className="text-red-500">{errors.phone.message}</p>
-            )}
+            {errors.phone && <p className="text-red-500">{errors.phone.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="position">Position</Label>
             <Input id="position" {...register("position")} />
-            {errors.position && (
-              <p className="text-red-500">{errors.position.message}</p>
-            )}
+            {errors.position && <p className="text-red-500">{errors.position.message}</p>}
           </div>
 
           <div>
             <Label htmlFor="role">Role</Label>
-            <Select
-              value={watch("role")}
-              onValueChange={(val) =>
-                setValue("role", val, { shouldValidate: true })
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="employee">Employee</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="hr">HR</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.role && (
-              <p className="text-red-500">{errors.role.message}</p>
-            )}
+            <select id="role" {...register("role")} className="w-full border rounded p-2">
+              <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
+              <option value="hr">HR</option>
+            </select>
           </div>
 
           <DialogFooter>
@@ -154,8 +121,8 @@ export function EmployeeFormDialog({ mode, defaultValues, trigger }: Props) {
                   ? "Adding..."
                   : "Add"
                 : isSubmitting
-                  ? "Saving..."
-                  : "Save"}
+                ? "Saving..."
+                : "Save"}
             </Button>
           </DialogFooter>
         </form>
