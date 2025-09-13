@@ -85,7 +85,7 @@ export function EmployeeFormDialog({ mode, defaultValues, trigger }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent aria-describedby="detail-modal">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Add Employee" : "Edit Employee"}

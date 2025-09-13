@@ -15,9 +15,10 @@ export type Employee = {
   employee_id: string;
   full_name: string;
   email: string;
-  phone: string;
+  // phone: string;
   position: string;
   role: string;
+  // image: string; // Assuming image is a string URL
 };
 
 const columnHelper = createColumnHelper<Employee>();
@@ -30,7 +31,12 @@ const columns = [
   columnHelper.accessor("email", { header: "Email" }),
   columnHelper.accessor("role", { header: "Role" }),
   columnHelper.accessor("position", { header: "Position" }),
-  columnHelper.accessor("phone", { header: "Phone" }),
+  // columnHelper.accessor("phone", { header: "Phone" }),
+  // columnHelper.accessor("image", {
+  //   header: "Image",
+  //   cell: ({ value }) => <img src={value} alt="Employee" />,
+  // }),
+  // Add more columns as needed...
   columnHelper.display({
     id: "actions",
     header: "",

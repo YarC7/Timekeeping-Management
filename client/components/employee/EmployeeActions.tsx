@@ -6,7 +6,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, ScanFaceIcon, Trash2 } from "lucide-react";
 import { EmployeeFormDialog } from "./EmployeeFormDialog";
 import { employeesApi } from "@/api/employees";
 import {
@@ -20,6 +20,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { FaceImageDialog } from "./FaceImageDialog";
 
 export function EmployeeActions({ employee }) {
   const deleteEmployee = employeesApi.useDelete();
@@ -47,50 +48,59 @@ export function EmployeeActions({ employee }) {
         align="end"
         className="rounded-lg border shadow-md p-1"
       >
+        {/* Image Handle */}
+        <FaceImageDialog
+          employee={employee}
+          trigger={
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <ScanFaceIcon className="w-4 h-4 mr-2" /> Images
+            </DropdownMenuItem>
+          }
+        />
+        <DropdownMenuSeparator className="my-1" />
         {/* Edit */}
-        <DropdownMenuItem asChild>
-          <EmployeeFormDialog
-            mode="edit"
-            defaultValues={{
-              employee_id: employee.employee_id,
-              full_name: employee.full_name,
-              email: employee.email,
-              phone: employee.phone,
-              position: employee.position,
-              role: employee.role,
-            }}
-            trigger={
-              <button className="flex items-center gap-2 rounded-md px-3 py-2 mx-auto w-full text-blue-600 hover:bg-blue-50 focus:bg-blue-50">
-                <Pencil className="w-4 h-4" /> Edit
-              </button>
-            }
-          />
-        </DropdownMenuItem>
+        <EmployeeFormDialog
+          mode="edit"
+          defaultValues={{
+            employee_id: employee.employee_id,
+            full_name: employee.full_name,
+            email: employee.email,
+            phone: employee.phone,
+            position: employee.position,
+            role: employee.role,
+          }}
+          trigger={
+            <DropdownMenuItem
+              className="text-blue-600 focus:text-blue-600"
+              onSelect={(e) => e.preventDefault()}
+            >
+              <Pencil className="w-4 h-4 mr-2" /> Edit
+            </DropdownMenuItem>
+          }
+        />
         <DropdownMenuSeparator className="my-1" />
 
         {/* Delete */}
-        <DropdownMenuItem asChild>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="flex items-center gap-2 rounded-md px-3 py-2 mx-auto w-full text-red-600 hover:bg-red-50 focus:bg-red-50">
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Are you sure you want to delete {employee.full_name}?
-                </AlertDialogTitle>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </DropdownMenuItem>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <DropdownMenuItem className="text-red-600 focus:text-red-600">
+              <Trash2 className="w-4 h-4 mr-2" /> Delete
+            </DropdownMenuItem>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Are you sure you want to delete {employee.full_name}?
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DropdownMenuContent>
     </DropdownMenu>
   );

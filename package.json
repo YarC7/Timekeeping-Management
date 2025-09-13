@@ -1,6 +1,7 @@
 {
   "name": "fusion-starter",
   "private": true,
+  "type": "module",
   "pkg": {
     "assets": [
       "dist/spa/*"
@@ -18,18 +19,20 @@
     "test": "vitest --run",
     "format.fix": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "migrate:make": "knex migrate:make --knexfile knexfile.js",
-    "migrate:latest": "knex migrate:latest --knexfile knexfile.js",
-    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.js",
-    "seed:run": "knex seed:run --knexfile knexfile.js"
+    "migrate:make": "knex migrate:make --knexfile knexfile.cjs",
+    "migrate:latest": "knex migrate:latest --knexfile knexfile.cjs",
+    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.cjs",
+    "seed:run": "knex seed:run --knexfile knexfile.cjs"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "knex": "^3.1.0",
+    "multer": "^2.0.2",
     "pg": "^8.16.3",
     "pg-promise": "^12.1.3",
+    "server": "^1.0.42",
     "zod": "^3.25.76"
   },
   "devDependencies": {
