@@ -1,4 +1,3 @@
-// api/employees.ts
 import { z } from "zod";
 import { createApi } from "@/lib/apiClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +8,6 @@ export const employeeSchema = z.object({
   email: z.string().email(),
   phone: z.string(),
   position: z.string(),
-  face_encoding: z.string().nullable(),
   role: z.enum(["employee", "manager", "hr"]).default("employee"),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),

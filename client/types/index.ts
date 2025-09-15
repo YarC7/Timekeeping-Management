@@ -5,5 +5,4 @@ export type Employee = {
   phoneNumber: string;
   role: string;
   position: string;
-  face_encodings: string[];
 };

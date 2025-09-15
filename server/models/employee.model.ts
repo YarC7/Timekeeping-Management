@@ -20,19 +20,18 @@ export const EmployeeModel = {
     return result.rows[0];
   },
 
-  async update(id, { full_name, email, phone, position, face_encoding, role }) {
+  async update(id, { full_name, email, phone, position, role }) {
     const result = await pool.query(
       `UPDATE employees 
        SET full_name = COALESCE($1, full_name), 
            email = COALESCE($2, email), 
            phone = COALESCE($3, phone), 
            position = COALESCE($4, position), 
-           face_encoding = COALESCE($5, face_encoding),
            role = COALESCE($6, role),
            updated_at = NOW()
        WHERE employee_id = $7 
        RETURNING *`,
-      [full_name || null, email || null, phone || null, position || null, face_encoding || null, role || null, id]
+      [full_name || null, email || null, phone || null, position || null, role || null, id]
     );
     return result.rows[0];
   },

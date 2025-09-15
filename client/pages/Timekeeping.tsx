@@ -6,14 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// Table UI moved to common DataTable component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,7 +39,7 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Checkbox } from "@/components/ui/checkbox";
+// Selection checkboxes handled inside DataTable via TanStack table
 import {
   BarChart3,
   CalendarRange,
@@ -54,13 +47,11 @@ import {
   ChevronRight,
   Download,
   Filter,
-  MoreHorizontal,
-  Pencil,
   Printer,
   RefreshCw,
   Search,
-  Trash2,
   UserCircle2,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -84,6 +75,10 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { useDashboard, useAttendancesList } from "@/api/attendances";
+import { DataTable } from "@/components/common/DataTable";
+import { useTimekeepingTable, type TimekeepingRow } from "@/hooks/useTimekeepingTable";
+import { EditDialog } from "@/components/timekeeping/EditDialog";
 
 interface Entry {
   id: string;
@@ -194,12 +189,10 @@ const initialRows: Entry[] = [
 ];
 
 export default function Timekeeping() {
-  const [rows, setRows] = useState<Entry[]>(initialRows);
-  const [selectedRowIds, setSelectedRowIds] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [rows, setRows] = useState<Entry[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [tempStartDate, setTempStartDate] = useState<Date | undefined>(
     undefined,
@@ -213,17 +206,57 @@ export default function Timekeeping() {
     role: "",
     overtime: "all" as "all" | "yes" | "no",
   });
-  const [sortBy, setSortBy] = useState<{
-    key: keyof Entry | "date";
-    dir: "asc" | "desc";
-  } | null>(null);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
   const [live, setLive] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [view, setView] = useState<"table" | "charts">("table");
   const [editRow, setEditRow] = useState<Entry | null>(null);
   const [isMd, setIsMd] = useState(false);
+
+  const { data: dashboard } = useDashboard();
+  const listParams = useMemo(
+    () => ({
+      dateFrom: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+      dateTo: dateRange?.from
+        ? format((dateRange.to ?? dateRange.from), "yyyy-MM-dd")
+        : undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      search: searchDebounced ? searchDebounced : undefined,
+    }),
+    [dateRange?.from, dateRange?.to, statusFilter, searchDebounced],
+  );
+
+  const {
+    data: apiRows = [],
+    isLoading,
+    isError,
+    error,
+  } = useAttendancesList(listParams);
+
+  useEffect(() => {
+    if (isError) {
+      toast.error("Failed to load attendance records");
+      return;
+    }
+    if (!isLoading) {
+      const mapped = apiRows.map(
+        (r): Entry => ({
+          id: r.attendance_id,
+          name: r.full_name,
+          avatar: `https://i.pravatar.cc/40?u=${r.employee_id}`,
+          date: r.date,
+          checkIn: r.check_in,
+          checkOut: r.check_out,
+          hours: r.total_hours,
+          status: r.status.toLowerCase().replace("-", "_") as Entry["status"],
+          department: r.position?.split(" ")[0] || undefined,
+          position: r.position || undefined,
+          role: r.role || undefined,
+          overtime: false, // placeholder unless provided by API
+        }),
+      );
+      setRows(mapped);
+    }
+  }, [apiRows, isLoading, isError]);
 
   // responsive month count for calendar
   useEffect(() => {
@@ -234,6 +267,12 @@ export default function Timekeeping() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  // Debounce search input
+  useEffect(() => {
+    const id = setTimeout(() => setSearchDebounced(searchInput.trim()), 250);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
   // Auto refresh (Live)
   useEffect(() => {
     if (!live) return;
@@ -243,22 +282,7 @@ export default function Timekeeping() {
     return () => clearInterval(id);
   }, [live]);
 
-  // KPI calculations
-  const todayISO = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
-  const kpis = useMemo(() => {
-    const checkedInToday = rows.filter(
-      (r) => r.date === todayISO && r.checkIn,
-    ).length;
-    const notCheckedIn = rows.filter(
-      (r) => r.date === todayISO && r.status === "not_checked_in",
-    ).length;
-    const totalHoursThisWeek = rows
-      .filter(() => true)
-      .reduce((acc, r) => acc + (r.hours || 0), 0);
-    return { checkedInToday, notCheckedIn, totalHoursThisWeek };
-  }, [rows, todayISO]);
-
-  // Filtering
+  // Filtering for Advanced filters and local search/date
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (statusFilter !== "all") {
@@ -273,12 +297,17 @@ export default function Timekeeping() {
         )
           return false;
       }
-      if (search && !r.name.toLowerCase().includes(search.toLowerCase()))
+      if (
+        searchDebounced &&
+        !r.name.toLowerCase().includes(searchDebounced.toLowerCase())
+      )
         return false;
       if (dateRange?.from) {
-        const d = new Date(r.date);
+        const d = new Date(`${r.date}T00:00:00`);
         const from = new Date(dateRange.from);
-        const to = dateRange.to ? new Date(dateRange.to) : from;
+        from.setHours(0, 0, 0, 0);
+        const to = new Date(dateRange.to ?? dateRange.from);
+        to.setHours(23, 59, 59, 999);
         if (d < from || d > to) return false;
       }
       if (advFilters.department && r.department !== advFilters.department)
@@ -292,64 +321,46 @@ export default function Timekeeping() {
       }
       return true;
     });
-  }, [rows, statusFilter, search, dateRange, advFilters]);
+  }, [rows, statusFilter, searchDebounced, dateRange, advFilters]);
 
-  // Sorting
-  const sorted = useMemo(() => {
-    if (!sortBy) return filtered;
-    const { key, dir } = sortBy;
-    const arr = [...filtered];
-    arr.sort((a, b) => {
-      const va = (a as any)[key];
-      const vb = (b as any)[key];
-      if (key === "date") {
-        return dir === "asc"
-          ? new Date(a.date).getTime() - new Date(b.date).getTime()
-          : new Date(b.date).getTime() - new Date(a.date).getTime();
-      }
-      if (typeof va === "number" && typeof vb === "number") {
-        return dir === "asc" ? va - vb : vb - va;
-      }
-      return dir === "asc"
-        ? String(va ?? "").localeCompare(String(vb ?? ""))
-        : String(vb ?? "").localeCompare(String(va ?? ""));
-    });
-    return arr;
-  }, [filtered, sortBy]);
-
-  // Pagination
-  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const pageRows = useMemo(() => {
-    const start = pageIndex * pageSize;
-    return sorted.slice(start, start + pageSize);
-  }, [sorted, pageIndex, pageSize]);
-
-  useEffect(() => {
-    if (pageIndex > pageCount - 1) setPageIndex(0);
-  }, [pageCount, pageIndex]);
-
-  const allSelectedOnPage = pageRows.every((r) => selectedRowIds[r.id]);
-  const someSelectedOnPage =
-    pageRows.some((r) => selectedRowIds[r.id]) && !allSelectedOnPage;
+  // Build TanStack table from filtered rows
+  const timekeepingData: TimekeepingRow[] = useMemo(
+    () =>
+      filtered.map((r) => ({
+        id: r.id,
+        name: r.name,
+        avatar: r.avatar,
+        date: r.date,
+        checkIn: r.checkIn,
+        checkOut: r.checkOut,
+        hours: r.hours,
+        status: r.status,
+      })),
+    [filtered],
+  );
+  const { table } = useTimekeepingTable(timekeepingData, {
+    onEdit: (row) => setEditRow(row as any),
+    onDelete: (ids) => handleDeleteRows(ids),
+  });
 
   // Helpers
   const resetFilters = () => {
     setStatusFilter("all");
-    setSearch("");
+    setSearchInput("");
+    setSearchDebounced("");
     setDateRange(undefined);
     setAdvFilters({ department: "", position: "", role: "", overtime: "all" });
   };
 
   const handleDeleteRows = (ids: string[]) => {
     setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
-    setSelectedRowIds({});
     toast.success("Deleted selected records ✅");
   };
 
   const exportSelected = (format: "csv" | "json") => {
     try {
-      const selected = rows.filter((r) => selectedRowIds[r.id]);
-      exportData(selected.length ? selected : sorted, "attendance", format);
+      const selected = table.getSelectedRowModel().rows.map((r) => r.original);
+      exportData(selected.length ? selected : timekeepingData, "attendance", format);
       toast.success("Export started");
     } catch (err: any) {
       toast.error(err?.message || "Failed to export", {
@@ -433,7 +444,7 @@ export default function Timekeeping() {
             <div>
               <CardDescription>Checked-in today</CardDescription>
               <CardTitle className="text-3xl font-extrabold tracking-tight">
-                {kpis.checkedInToday}
+                {dashboard?.checkedInToday ?? 0}
               </CardTitle>
             </div>
             <div className="p-3 rounded-full bg-primary/10 text-primary">
@@ -446,7 +457,7 @@ export default function Timekeeping() {
             <div>
               <CardDescription>Not checked-in yet</CardDescription>
               <CardTitle className="text-3xl font-extrabold tracking-tight">
-                {kpis.notCheckedIn}
+                {dashboard?.notCheckedInToday ?? 0}
               </CardTitle>
             </div>
             <div className="p-3 rounded-full bg-muted text-foreground/80">
@@ -459,7 +470,7 @@ export default function Timekeeping() {
             <div>
               <CardDescription>Total working hours this week</CardDescription>
               <CardTitle className="text-3xl font-extrabold tracking-tight">
-                {kpis.totalHoursThisWeek.toFixed(1)}h
+                {(dashboard?.totalHoursThisWeek ?? 0).toFixed(1)}h
               </CardTitle>
             </div>
             <div className="p-3 rounded-full bg-primary/10 text-primary">
@@ -472,7 +483,7 @@ export default function Timekeeping() {
       {/* Filters bar */}
       <Card className="mb-4">
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
+          <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
             <Popover
               open={datePopoverOpen}
               onOpenChange={(o) => {
@@ -492,139 +503,39 @@ export default function Timekeeping() {
                   {dateRange?.from ? (
                     dateRange.to ? (
                       <span>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
+                        {format(dateRange.from, "dd/MM/yyyy")} -{" "}
+                        {format(dateRange.to, "dd/MM/yyyy")}
                       </span>
                     ) : (
-                      <span>{format(dateRange.from, "LLL dd, y")}</span>
+                      <span>{format(dateRange.from, "dd/MM/yyyy")}</span>
                     )
                   ) : (
                     <span>Pick a date range</span>
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-2xs p-0" align="start">
+              <PopoverContent className="w-[480px] max-w-[90vw] max-h-[70vh] overflow-y-auto p-0" align="start">
                 <div className="p-3">
                   <div className="mb-3 text-sm font-medium">
                     Select Date Range
                   </div>
                   <CalendarComponent
-                    mode="single"
+                    mode="range"
                     className="w-full max-w-full"
-                    numberOfMonths={1}
-                    selected={undefined}
-                    onSelect={(date) => {
-                      if (!date) return;
-                      const selectedDate = new Date(
-                        date.getFullYear(),
-                        date.getMonth(),
-                        date.getDate(),
-                      );
-                      if (!tempStartDate && !tempEndDate) {
-                        setTempStartDate(selectedDate);
+                    numberOfMonths={isMd ? 2 : 1}
+                    selected={
+                      tempStartDate || tempEndDate
+                        ? { from: tempStartDate, to: tempEndDate ?? tempStartDate }
+                        : undefined
+                    }
+                    onSelect={(range: DateRange | undefined) => {
+                      if (!range) {
+                        setTempStartDate(undefined);
                         setTempEndDate(undefined);
                         return;
                       }
-                      if (tempStartDate && !tempEndDate) {
-                        const startDate = new Date(
-                          tempStartDate.getFullYear(),
-                          tempStartDate.getMonth(),
-                          tempStartDate.getDate(),
-                        );
-                        if (selectedDate >= startDate) {
-                          setTempEndDate(selectedDate);
-                        } else {
-                          setTempStartDate(selectedDate);
-                          setTempEndDate(undefined);
-                        }
-                        return;
-                      }
-                      if (tempStartDate && tempEndDate) {
-                        const startDate = new Date(tempStartDate);
-                        const endDate = new Date(tempEndDate);
-                        const selectedDateStr = selectedDate.toDateString();
-                        const startDateStr = startDate.toDateString();
-                        const endDateStr = endDate.toDateString();
-                        if (
-                          selectedDateStr === startDateStr ||
-                          selectedDateStr === endDateStr
-                        ) {
-                          setTempStartDate(undefined);
-                          setTempEndDate(undefined);
-                          return;
-                        }
-                        if (selectedDate < startDate) {
-                          setTempStartDate(selectedDate);
-                        } else if (selectedDate > endDate) {
-                          setTempEndDate(selectedDate);
-                        } else {
-                          setTempEndDate(selectedDate);
-                        }
-                      }
-                    }}
-                    modifiers={{
-                      range_start: tempStartDate ? [tempStartDate] : [],
-                      range_end: tempEndDate ? [tempEndDate] : [],
-                      range_middle:
-                        tempStartDate && tempEndDate
-                          ? (() => {
-                              const dates = [] as Date[];
-                              const start = new Date(tempStartDate);
-                              const end = new Date(tempEndDate);
-                              if (start.getTime() === end.getTime())
-                                return dates;
-                              const current = new Date(start);
-                              current.setDate(current.getDate() + 1);
-                              while (current < end) {
-                                dates.push(new Date(current));
-                                current.setDate(current.getDate() + 1);
-                              }
-                              return dates;
-                            })()
-                          : [],
-                      range_end_highlight: tempEndDate ? [tempEndDate] : [],
-                      clickable_for_reset:
-                        tempStartDate && tempEndDate
-                          ? [tempStartDate, tempEndDate]
-                          : [],
-                      clickable_for_shrink:
-                        tempStartDate && tempEndDate
-                          ? (() => {
-                              const dates = [] as Date[];
-                              const start = new Date(tempStartDate);
-                              const end = new Date(tempEndDate);
-                              if (start.getTime() === end.getTime())
-                                return dates;
-                              const current = new Date(start);
-                              current.setDate(current.getDate() + 1);
-                              while (current < end) {
-                                dates.push(new Date(current));
-                                current.setDate(current.getDate() + 1);
-                              }
-                              return dates;
-                            })()
-                          : [],
-                    }}
-                    modifiersStyles={{
-                      range_start: {
-                        backgroundColor: "hsl(210, 90%, 55%)", // xanh đậm
-                        color: "white",
-                        borderRadius: "8px 0 0 8px",
-                      },
-                      range_end: {
-                        backgroundColor: "hsl(var(--primary))",
-                        color: "hsl(var(--primary-foreground))",
-                        borderRadius: "0 6px 6px 0",
-                      },
-                      range_middle: {
-                        backgroundColor: "hsl(210, 90%, 55%, 0.15)",
-                      },
-                      selected: {
-                        fontWeight: "600",
-                      },
-                      outside: {
-                        color: "hsl(var(--muted-foreground))",
-                      },
+                      setTempStartDate(range.from);
+                      setTempEndDate(range.to ?? range.from);
                     }}
                   />
 
@@ -650,8 +561,7 @@ export default function Timekeeping() {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    Click start or end date to reset, click between dates to
-                    shrink range, or click outside to extend.
+                    Select a start and end date. Use Apply to confirm.
                   </p>
 
                   <div className="flex items-center justify-end gap-2 pt-1">
@@ -693,6 +603,19 @@ export default function Timekeeping() {
               </PopoverContent>
             </Popover>
 
+            <Button
+              variant="ghost"
+              className="md:ml-[-8px]"
+              onClick={() => {
+                setDateRange(undefined);
+                setTempStartDate(undefined);
+                setTempEndDate(undefined);
+              }}
+              disabled={!dateRange?.from}
+            >
+              <XCircle className="mr-2 size-4" /> Reset
+            </Button>
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-[220px]">
                 <SelectValue placeholder="All status" />
@@ -712,8 +635,8 @@ export default function Timekeeping() {
               <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
               <Input
                 placeholder="Search by employee name…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-8"
               />
             </div>
@@ -724,7 +647,7 @@ export default function Timekeeping() {
                   <Filter className="size-4" /> Advanced
                 </Button>
               </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-md">
+              <SheetContent className="w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle>Advanced filters</SheetTitle>
                 </SheetHeader>
@@ -939,7 +862,7 @@ export default function Timekeeping() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="text-sm text-muted-foreground">
-                {Object.values(selectedRowIds).filter(Boolean).length} selected
+                {table.getSelectedRowModel().rows.length} selected
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -954,240 +877,17 @@ export default function Timekeeping() {
                   size="sm"
                   onClick={() =>
                     handleDeleteRows(
-                      Object.entries(selectedRowIds)
-                        .filter(([, v]) => v)
-                        .map(([id]) => id),
+                      table.getSelectedRowModel().rows.map((r) => r.original.id),
                     )
                   }
-                  disabled={!Object.values(selectedRowIds).some(Boolean)}
+                  disabled={table.getSelectedRowModel().rows.length === 0}
                 >
                   Delete selected
                 </Button>
               </div>
             </div>
 
-            <div className="relative w-full overflow-x-auto overflow-y-hidden rounded-md border">
-              <Table className="w-full">
-                <TableHeader className="sticky top-0 z-[1] bg-card/95 backdrop-blur">
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={allSelectedOnPage}
-                        onCheckedChange={(val) => {
-                          const map = { ...selectedRowIds };
-                          for (const r of pageRows) map[r.id] = !!val;
-                          setSelectedRowIds(map);
-                        }}
-                        aria-label="Select all"
-                        data-state={
-                          someSelectedOnPage
-                            ? "indeterminate"
-                            : allSelectedOnPage
-                              ? "checked"
-                              : "unchecked"
-                        }
-                      />
-                    </TableHead>
-                    <TableHead
-                      className="min-w-[220px] cursor-pointer"
-                      onClick={() =>
-                        setSortBy((s) => ({
-                          key: "name",
-                          dir: s?.dir === "asc" ? "desc" : "asc",
-                        }))
-                      }
-                    >
-                      Employee
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() =>
-                        setSortBy((s) => ({
-                          key: "date",
-                          dir: s?.dir === "asc" ? "desc" : "asc",
-                        }))
-                      }
-                    >
-                      Date
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() =>
-                        setSortBy((s) => ({
-                          key: "checkIn",
-                          dir: s?.dir === "asc" ? "desc" : "asc",
-                        }))
-                      }
-                    >
-                      Check-in
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() =>
-                        setSortBy((s) => ({
-                          key: "checkOut",
-                          dir: s?.dir === "asc" ? "desc" : "asc",
-                        }))
-                      }
-                    >
-                      Check-out
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() =>
-                        setSortBy((s) => ({
-                          key: "hours",
-                          dir: s?.dir === "asc" ? "desc" : "asc",
-                        }))
-                      }
-                    >
-                      Total Hours
-                    </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pageRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <img
-                            src="/placeholder.svg"
-                            alt="Empty"
-                            className="w-24 opacity-60"
-                          />
-                          <div>No records found</div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={resetFilters}
-                          >
-                            Reset filters
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    pageRows.map((r) => (
-                      <TableRow
-                        key={r.id}
-                        className="odd:bg-muted/30 hover:bg-accent/30"
-                      >
-                        <TableCell>
-                          <Checkbox
-                            checked={!!selectedRowIds[r.id]}
-                            onCheckedChange={(val) =>
-                              setSelectedRowIds((m) => ({
-                                ...m,
-                                [r.id]: !!val,
-                              }))
-                            }
-                            aria-label="Select row"
-                          />
-                        </TableCell>
-                        <TableCell className="">
-                          <div className="flex items-center gap-2">
-                            <img
-                              src={r.avatar}
-                              alt={r.name}
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                            <span className="font-medium">{r.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{r.date}</TableCell>
-                        <TableCell>{r.checkIn ?? "-"}</TableCell>
-                        <TableCell>{r.checkOut ?? "-"}</TableCell>
-                        <TableCell>{r.hours ?? "-"}</TableCell>
-                        <TableCell>{statusBadge(r.status)}</TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 p-0 hover:bg-muted"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  setEditRow(r);
-                                }}
-                              >
-                                <Pencil className="w-4 h-4 mr-2" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  handleDeleteRows([r.id]);
-                                }}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem disabled>
-                                Manage Images
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Pagination controls */}
-            <div className="flex items-center justify-between mt-4 gap-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-                  disabled={pageIndex === 0}
-                >
-                  <ChevronLeft className="size-4" /> Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPageIndex((i) => Math.min(pageCount - 1, i + 1))
-                  }
-                  disabled={pageIndex >= pageCount - 1}
-                >
-                  Next <ChevronRight className="size-4 ml-1" />
-                </Button>
-              </div>
-              <div className="text-sm">
-                Page {pageIndex + 1} of {pageCount}
-              </div>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(v) => {
-                  setPageSize(Number(v));
-                  setPageIndex(0);
-                }}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Rows per page" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[5, 10, 20, 50].map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      Show {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <DataTable table={table} isLoading={isLoading} isError={isError} error={error} />
           </CardContent>
         </Card>
       ) : null}
@@ -1195,97 +895,11 @@ export default function Timekeeping() {
       {/* Edit modal */}
       {editRow ? (
         <EditDialog
-          row={editRow}
+          row={editRow as unknown as TimekeepingRow}
           onClose={() => setEditRow(null)}
-          onSave={editRowSave}
+          onSave={(r) => editRowSave(r as unknown as Entry)}
         />
       ) : null}
     </MainLayout>
-  );
-}
-
-function EditDialog({
-  row,
-  onClose,
-  onSave,
-}: {
-  row: Entry;
-  onClose: () => void;
-  onSave: (r: Entry) => void;
-}) {
-  const [checkIn, setCheckIn] = useState(row.checkIn ?? "");
-  const [checkOut, setCheckOut] = useState(row.checkOut ?? "");
-  const [status, setStatus] = useState<Entry["status"]>(row.status);
-
-  return (
-    <Sheet
-      open
-      onOpenChange={(o) => {
-        if (!o) onClose();
-      }}
-    >
-      <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>Edit entry</SheetTitle>
-        </SheetHeader>
-        <div className="mt-4 space-y-4">
-          <div className="text-sm text-muted-foreground">
-            {row.name} — {row.date}
-          </div>
-          <div>
-            <label className="text-sm font-medium">Check-in</label>
-            <Input
-              value={checkIn}
-              placeholder="HH:mm"
-              onChange={(e) => setCheckIn(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Check-out</label>
-            <Input
-              value={checkOut}
-              placeholder="HH:mm"
-              onChange={(e) => setCheckOut(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Status</label>
-            <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="present">Present</SelectItem>
-                <SelectItem value="not_checked_out">Not checked-out</SelectItem>
-                <SelectItem value="checked_out">Checked-out</SelectItem>
-                <SelectItem value="not_checked_in">Absent</SelectItem>
-                <SelectItem value="on_leave">On leave</SelectItem>
-                <SelectItem value="late">Late</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <SheetFooter className="mt-6">
-          <div className="flex w-full gap-2">
-            <Button
-              className="flex-1"
-              onClick={() =>
-                onSave({
-                  ...row,
-                  checkIn: checkIn || null,
-                  checkOut: checkOut || null,
-                  status,
-                })
-              }
-            >
-              Save
-            </Button>
-            <Button variant="outline" className="flex-1" onClick={onClose}>
-              Cancel
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
   );
 }

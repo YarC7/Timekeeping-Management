@@ -5,7 +5,7 @@ dotenv.config({ path: ".env.local" });
 const { Pool } = pkg;
 
 const DB_URL = process.env.DATABASE_URL;
-console.log("DB URL: ",DB_URL);
+
 export const pool = new Pool({
   connectionString: DB_URL,
 });

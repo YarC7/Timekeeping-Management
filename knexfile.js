@@ -1,6 +1,8 @@
-require("dotenv").config({ path: ".env.local" });
+// knexfile.js
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 
-module.exports = {
+export default {
   development: {
     client: "pg",
     connection: process.env.DATABASE_URL,

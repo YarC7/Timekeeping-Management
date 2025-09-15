@@ -3,7 +3,7 @@ import { s3Client } from "../config/s3.js";
 import multer from "multer";
 import crypto from "crypto";
 import path from "path";
-import { EmployeeImageModel } from "server/models/employeeImage.js";
+import { EmployeeImageModel } from "../models/employeeImage.model.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
