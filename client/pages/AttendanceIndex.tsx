@@ -1,0 +1,243 @@
+import MainLayout from "@/components/layout/MainLayout";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CalendarRange, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { employeesApi } from "@/api/employees";
+import { useAttendancesList } from "@/api/attendances";
+import { Link } from "react-router-dom";
+
+function parseTimeToMinutes(s: string | null): number | null {
+  if (!s) return null;
+  if (s.includes("T")) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
+  }
+  const parts = s.split(":");
+  const hh = Number(parts[0]);
+  const mm = Number(parts[1]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  return hh * 60 + mm;
+}
+
+function formatTimeDisplay(s: string | null) {
+  const mins = parseTimeToMinutes(s);
+  if (mins == null) return "-";
+  const hh = String(Math.floor(mins / 60)).padStart(2, "0");
+  const mm = String(mins % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+export default function AttendanceIndex() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateOpen, setDateOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: employees = [] } = employeesApi.useList();
+  const { data: attendances = [], isLoading, isError, error } = useAttendancesList({ date: format(selectedDate, "yyyy-MM-dd") });
+
+  type Row = {
+    employee_id: string;
+    name: string;
+    department?: string | null;
+    position?: string | null;
+    status: "Present" | "Absent" | "Late" | "Not-checked-out" | "Leave";
+    check_in: string | null;
+    check_out: string | null;
+    hours: number | null;
+  };
+
+  const rows: Row[] = useMemo(() => {
+    const byEmp: Record<string, any> = {};
+    for (const a of attendances) {
+      byEmp[a.employee_id] = a;
+    }
+    return employees
+      .filter((e) => e.full_name.toLowerCase().includes(search.trim().toLowerCase()))
+      .map((e) => {
+        const a = byEmp[e.employee_id];
+        let status: Row["status"] = "Absent";
+        let check_in: string | null = null;
+        let check_out: string | null = null;
+        let hours: number | null = null;
+
+        if (a) {
+          if (a.status === "Leave") {
+            status = "Leave";
+          } else if (a.check_in && !a.check_out) {
+            status = "Not-checked-out";
+          } else if (a.check_in) {
+            const mins = parseTimeToMinutes(a.check_in);
+            status = mins != null && mins > 9 * 60 ? "Late" : "Present";
+          }
+          check_in = a.check_in;
+          check_out = a.check_out;
+          hours = a.total_hours;
+        }
+        return {
+          employee_id: e.employee_id,
+          name: e.full_name,
+          department: (e as any).department ?? null,
+          position: e.position,
+          status,
+          check_in,
+          check_out,
+          hours,
+        } satisfies Row;
+      });
+  }, [attendances, employees, search]);
+
+  const kpis = useMemo(() => {
+    const agg = { Present: 0, Absent: 0, Late: 0, NotCheckedOut: 0, Overtime: 0 };
+    for (const r of rows) {
+      if (r.status === "Present") agg.Present++;
+      else if (r.status === "Absent") agg.Absent++;
+      else if (r.status === "Late") agg.Late++;
+      else if (r.status === "Not-checked-out") agg.NotCheckedOut++;
+      const h = typeof r.hours === "number" ? r.hours : null;
+      if (h != null && h > 8) agg.Overtime++;
+    }
+    return agg;
+  }, [rows]);
+
+  const statusBadge = (s: Row["status"]) => {
+    switch (s) {
+      case "Present":
+        return <Badge className="bg-green-500 text-white border-green-500">Present</Badge>;
+      case "Late":
+        return <Badge className="bg-orange-500 text-white border-orange-500">Late</Badge>;
+      case "Absent":
+        return <Badge className="bg-gray-300 text-gray-900 border-gray-300">Absent</Badge>;
+      case "Not-checked-out":
+        return <Badge className="bg-yellow-400 text-black border-yellow-400">Not checked-out</Badge>;
+      case "Leave":
+        return <Badge className="bg-blue-500 text-white border-blue-500">Leave</Badge>;
+    }
+  };
+
+  return (
+    <MainLayout title="Attendance Index">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Present</CardDescription>
+            <CardTitle className="text-3xl">{kpis.Present}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Absent</CardDescription>
+            <CardTitle className="text-3xl">{kpis.Absent}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Late</CardDescription>
+            <CardTitle className="text-3xl">{kpis.Late}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Not checked-out</CardDescription>
+            <CardTitle className="text-3xl">{kpis.NotCheckedOut}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Overtime</CardDescription>
+            <CardTitle className="text-3xl">{kpis.Overtime}</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <Card className="mb-4">
+        <CardContent className="pt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Popover open={dateOpen} onOpenChange={setDateOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start w-full sm:w-auto">
+                <CalendarRange className="mr-2 h-4 w-4" />
+                {format(selectedDate, "dd/MM/yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search employee..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-4">
+          {isLoading ? (
+            <div>Loading...</div>
+          ) : isError ? (
+            <div className="text-red-500">{String((error as Error)?.message ?? "Error")}</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Check-in</TableHead>
+                  <TableHead>Check-out</TableHead>
+                  <TableHead>Hours</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.employee_id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2 min-w-[180px]">
+                        <img
+                          src={`https://i.pravatar.cc/40?u=${r.employee_id}`}
+                          alt={r.name}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <span className="font-medium">{r.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{r.department ?? "—"}</TableCell>
+                    <TableCell>{r.position ?? "—"}</TableCell>
+                    <TableCell>{statusBadge(r.status)}</TableCell>
+                    <TableCell>{formatTimeDisplay(r.check_in)}</TableCell>
+                    <TableCell>{formatTimeDisplay(r.check_out)}</TableCell>
+                    <TableCell>{r.hours != null ? r.hours.toFixed(2) : "-"}</TableCell>
+                    <TableCell>
+                      <Link to={`/attendance/${r.employee_id}`} className="text-primary hover:underline">
+                        View detail
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </MainLayout>
+  );
+}

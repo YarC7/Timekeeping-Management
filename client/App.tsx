@@ -13,6 +13,8 @@ import Settings from "@/pages/Settings";
 import Users from "@/pages/Users";
 import Timekeeping from "@/pages/Timekeeping";
 import Exports from "@/pages/Exports";
+import AttendanceIndex from "@/pages/AttendanceIndex";
+import EmployeeAttendanceDetail from "@/pages/EmployeeAttendanceDetail";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +55,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Timekeeping />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/attendance"
+            element={
+              <ProtectedRoute>
+                <AttendanceIndex />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/attendance/:id"
+            element={
+              <ProtectedRoute>
+                <EmployeeAttendanceDetail />
               </ProtectedRoute>
             }
           />

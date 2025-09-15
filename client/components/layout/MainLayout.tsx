@@ -26,6 +26,7 @@ import {
   Settings,
   Users as UsersIcon,
   CalendarClock,
+  CalendarRange,
   Download,
   Sun,
   Moon,
@@ -46,6 +47,7 @@ export default function MainLayout({
     { to: "/dashboard", label: "Dashboard", icon: Home },
     { to: "/users", label: "Users", icon: UsersIcon },
     { to: "/timekeeping", label: "Timekeeping", icon: CalendarClock },
+    { to: "/attendance", label: "Attendance", icon: CalendarRange },
     { to: "/exports", label: "Exports", icon: Download },
     { to: "/settings", label: "Settings", icon: Settings },
   ];
