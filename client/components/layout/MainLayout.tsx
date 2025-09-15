@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -27,6 +27,8 @@ import {
   Users as UsersIcon,
   CalendarClock,
   Download,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 export default function MainLayout({
@@ -47,6 +49,23 @@ export default function MainLayout({
     { to: "/exports", label: "Exports", icon: Download },
     { to: "/settings", label: "Settings", icon: Settings },
   ];
+
+  const [isDark, setIsDark] = useState<boolean>(() =>
+    typeof document !== "undefined"
+      ? document.documentElement.classList.contains("dark") ||
+        (typeof localStorage !== "undefined" && localStorage.theme === "dark")
+      : false,
+  );
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      localStorage.theme = "dark";
+    } else {
+      root.classList.remove("dark");
+      localStorage.theme = "light";
+    }
+  }, [isDark]);
 
   return (
     <SidebarProvider>
@@ -110,10 +129,19 @@ export default function MainLayout({
               <BarChart3 className="size-4 text-primary" />
               <span className="font-medium text-foreground">{title ?? ""}</span>
             </div>
-            <div className="ml-auto" />
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Toggle dark mode"
+                onClick={() => setIsDark((v) => !v)}
+              >
+                {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              </Button>
+            </div>
           </div>
         </header>
-        <main className="p-6">{children}</main>
+        <main className="p-6 min-w-0">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
