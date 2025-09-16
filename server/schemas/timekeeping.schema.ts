@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-export const attendanceSchema = z.object({
-  attendance_id: z.string().uuid(),
+export const timekeepingSchema = z.object({
+  timekeeping_id: z.string().uuid(),
   employee_id: z.string().uuid(),
-  date: z.string(), // YYYY-MM-DD
+  work_date: z.string(), // YYYY-MM-DD
   check_in: z.string().nullable(),
   check_out: z.string().nullable(),
   total_hours: z.number().nullable(),
@@ -12,4 +12,4 @@ export const attendanceSchema = z.object({
   updated_at: z.string().datetime().optional(),
 });
 
-export type Attendance = z.infer<typeof attendanceSchema>;
+export type Timekeeping = z.infer<typeof timekeepingSchema>;

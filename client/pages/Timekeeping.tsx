@@ -75,9 +75,14 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { useDashboard, useAttendancesList } from "@/api/attendances";
+import { useDashboard } from "@/api/timekeeping";
+import { useAttendanceLogs } from "@/api/attendanceLogs";
+import { employeesApi } from "@/api/employees";
 import { DataTable } from "@/components/common/DataTable";
-import { useTimekeepingTable, type TimekeepingRow } from "@/hooks/useTimekeepingTable";
+import {
+  useTimekeepingTable,
+  type TimekeepingRow,
+} from "@/hooks/useTimekeepingTable";
 import { EditDialog } from "@/components/timekeeping/EditDialog";
 
 interface Entry {
@@ -100,93 +105,6 @@ interface Entry {
   role?: string;
   overtime?: boolean;
 }
-
-const initialRows: Entry[] = [
-  {
-    id: "1",
-    name: "Sarah Lee",
-    avatar: "https://i.pravatar.cc/40?img=5",
-    date: "2025-09-10",
-    checkIn: "08:55",
-    checkOut: "17:30",
-    hours: 7.5,
-    status: "checked_out",
-    department: "Engineering",
-    position: "Frontend",
-    role: "employee",
-    overtime: false,
-  },
-  {
-    id: "2",
-    name: "John Park",
-    avatar: "https://i.pravatar.cc/40?img=11",
-    date: "2025-09-10",
-    checkIn: "09:02",
-    checkOut: null,
-    hours: null,
-    status: "not_checked_out",
-    department: "Engineering",
-    position: "Backend",
-    role: "employee",
-    overtime: true,
-  },
-  {
-    id: "3",
-    name: "Alex Kim",
-    avatar: "https://i.pravatar.cc/40?img=3",
-    date: "2025-09-09",
-    checkIn: "08:45",
-    checkOut: "16:45",
-    hours: 8,
-    status: "present",
-    department: "Design",
-    position: "Product Designer",
-    role: "employee",
-    overtime: false,
-  },
-  {
-    id: "4",
-    name: "Maria Garcia",
-    avatar: "https://i.pravatar.cc/40?img=15",
-    date: "2025-09-10",
-    checkIn: null,
-    checkOut: null,
-    hours: null,
-    status: "not_checked_in",
-    department: "People",
-    position: "HRBP",
-    role: "hr",
-    overtime: false,
-  },
-  {
-    id: "5",
-    name: "Kenji Tanaka",
-    avatar: "https://i.pravatar.cc/40?img=21",
-    date: "2025-09-10",
-    checkIn: "10:05",
-    checkOut: "18:40",
-    hours: 7.2,
-    status: "late",
-    department: "Operations",
-    position: "Coordinator",
-    role: "employee",
-    overtime: false,
-  },
-  {
-    id: "6",
-    name: "Emma Wilson",
-    avatar: "https://i.pravatar.cc/40?img=9",
-    date: "2025-09-10",
-    checkIn: null,
-    checkOut: null,
-    hours: null,
-    status: "on_leave",
-    department: "Finance",
-    position: "Accountant",
-    role: "employee",
-    overtime: false,
-  },
-];
 
 export default function Timekeeping() {
   const [rows, setRows] = useState<Entry[]>([]);
@@ -213,50 +131,105 @@ export default function Timekeeping() {
   const [isMd, setIsMd] = useState(false);
 
   const { data: dashboard } = useDashboard();
-  const listParams = useMemo(
-    () => ({
-      dateFrom: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-      dateTo: dateRange?.from
-        ? format((dateRange.to ?? dateRange.from), "yyyy-MM-dd")
-        : undefined,
-      status: statusFilter !== "all" ? statusFilter : undefined,
-      search: searchDebounced ? searchDebounced : undefined,
-    }),
-    [dateRange?.from, dateRange?.to, statusFilter, searchDebounced],
-  );
-
+  // Fetch recent attendance logs and all employees for mapping
   const {
-    data: apiRows = [],
-    isLoading,
-    isError,
-    error,
-  } = useAttendancesList(listParams);
+    data: logs = [],
+    isLoading: logsLoading,
+    isError: logsError,
+    error: logsErr,
+    refetch: refetchLogs,
+  } = useAttendanceLogs(500);
+  const {
+    data: employees = [],
+    isLoading: empLoading,
+    isError: empError,
+    error: empErr,
+  } = employeesApi.useList();
 
   useEffect(() => {
-    if (isError) {
-      toast.error("Failed to load attendance records");
+    // Combine logs and employees to daily entries
+    if (logsError || empError) {
+      toast.error("Failed to load attendance data");
       return;
     }
-    if (!isLoading) {
-      const mapped = apiRows.map(
-        (r): Entry => ({
-          id: r.attendance_id,
-          name: r.full_name,
-          avatar: `https://i.pravatar.cc/40?u=${r.employee_id}`,
-          date: r.date,
-          checkIn: r.check_in,
-          checkOut: r.check_out,
-          hours: r.total_hours,
-          status: r.status.toLowerCase().replace("-", "_") as Entry["status"],
-          department: r.position?.split(" ")[0] || undefined,
-          position: r.position || undefined,
-          role: r.role || undefined,
-          overtime: false, // placeholder unless provided by API
-        }),
+    if (!logsLoading && !empLoading) {
+      // Build employee map for quick lookup
+      const empMap = new Map(
+        employees.map((e: any) => [e.employee_id, e])
       );
-      setRows(mapped);
+
+      // Group logs by employee_id + date (YYYY-MM-DD)
+      const groups = new Map<string, any[]>();
+      for (const log of logs as any[]) {
+        const date = (log.timestamp as string).slice(0, 10);
+        const key = `${log.employee_id}__${date}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(log);
+      }
+
+      const toHHmm = (iso: string) => iso.substring(11, 16);
+      const parseMinutes = (hhmm: string) => {
+        const [h, m] = hhmm.split(":").map(Number);
+        return h * 60 + m;
+      };
+
+      const entries: Entry[] = [];
+      for (const [key, glogs] of groups) {
+        const [employee_id, date] = key.split("__");
+        const emp = empMap.get(employee_id);
+
+        const checkins = glogs
+          .filter((g) => g.check_type === "checkin")
+          .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        const checkouts = glogs
+          .filter((g) => g.check_type === "checkout")
+          .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+        const checkInIso = checkins[0]?.timestamp as string | undefined;
+        const checkOutIso = checkouts[checkouts.length - 1]?.timestamp as
+          | string
+          | undefined;
+        const checkIn = checkInIso ? toHHmm(checkInIso) : null;
+        const checkOut = checkOutIso ? toHHmm(checkOutIso) : null;
+
+        let hours: number | null = null;
+        if (checkInIso && checkOutIso) {
+          const diffMs =
+            new Date(checkOutIso).getTime() - new Date(checkInIso).getTime();
+          hours = Math.max(0, Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10);
+        }
+
+        // Derive status
+        let status: Entry["status"] = "not_checked_in";
+        if (checkIn && checkOut) {
+          // Late if first checkin after 09:00
+          const lateThreshold = 9 * 60; // 09:00
+          status = parseMinutes(checkIn) > lateThreshold ? "late" : "checked_out";
+        } else if (checkIn && !checkOut) {
+          status = "not_checked_out";
+        } else if (!checkIn && !checkOut) {
+          status = "not_checked_in";
+        }
+
+        entries.push({
+          id: `${employee_id}-${date}`,
+          name: emp?.full_name ?? employee_id,
+          avatar: `https://i.pravatar.cc/40?u=${employee_id}`,
+          date,
+          checkIn,
+          checkOut,
+          hours,
+          status,
+          department: emp?.position?.split(" ")[0] || undefined,
+          position: emp?.position || undefined,
+          role: emp?.role || undefined,
+          overtime: false,
+        });
+      }
+
+      setRows(entries);
     }
-  }, [apiRows, isLoading, isError]);
+  }, [logs, employees, logsLoading, empLoading, logsError, empError]);
 
   // responsive month count for calendar
   useEffect(() => {
@@ -278,9 +251,11 @@ export default function Timekeeping() {
     if (!live) return;
     const id = setInterval(() => {
       setLastUpdated(new Date());
+      // actively refetch logs while live
+      refetchLogs();
     }, 8000);
     return () => clearInterval(id);
-  }, [live]);
+  }, [live, refetchLogs]);
 
   // Filtering for Advanced filters and local search/date
   const filtered = useMemo(() => {
@@ -360,7 +335,11 @@ export default function Timekeeping() {
   const exportSelected = (format: "csv" | "json") => {
     try {
       const selected = table.getSelectedRowModel().rows.map((r) => r.original);
-      exportData(selected.length ? selected : timekeepingData, "attendance", format);
+      exportData(
+        selected.length ? selected : timekeepingData,
+        "attendance",
+        format,
+      );
       toast.success("Export started");
     } catch (err: any) {
       toast.error(err?.message || "Failed to export", {
@@ -514,7 +493,10 @@ export default function Timekeeping() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[480px] max-w-[90vw] max-h-[70vh] overflow-y-auto p-0" align="start">
+              <PopoverContent
+                className="w-[480px] max-w-[90vw] max-h-[70vh] overflow-y-auto p-0"
+                align="start"
+              >
                 <div className="p-3">
                   <div className="mb-3 text-sm font-medium">
                     Select Date Range
@@ -525,7 +507,10 @@ export default function Timekeeping() {
                     numberOfMonths={isMd ? 2 : 1}
                     selected={
                       tempStartDate || tempEndDate
-                        ? { from: tempStartDate, to: tempEndDate ?? tempStartDate }
+                        ? {
+                            from: tempStartDate,
+                            to: tempEndDate ?? tempStartDate,
+                          }
                         : undefined
                     }
                     onSelect={(range: DateRange | undefined) => {
@@ -877,7 +862,9 @@ export default function Timekeeping() {
                   size="sm"
                   onClick={() =>
                     handleDeleteRows(
-                      table.getSelectedRowModel().rows.map((r) => r.original.id),
+                      table
+                        .getSelectedRowModel()
+                        .rows.map((r) => r.original.id),
                     )
                   }
                   disabled={table.getSelectedRowModel().rows.length === 0}
@@ -887,7 +874,12 @@ export default function Timekeeping() {
               </div>
             </div>
 
-            <DataTable table={table} isLoading={isLoading} isError={isError} error={error} />
+            <DataTable
+              table={table}
+              isLoading={logsLoading || empLoading}
+              isError={logsError || empError}
+              error={(logsErr as any) || (empErr as any)}
+            />
           </CardContent>
         </Card>
       ) : null}

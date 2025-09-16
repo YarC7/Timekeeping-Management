@@ -27,9 +27,9 @@ export const EmployeeModel = {
            email = COALESCE($2, email), 
            phone = COALESCE($3, phone), 
            position = COALESCE($4, position), 
-           role = COALESCE($6, role),
+           role = COALESCE($5, role),
            updated_at = NOW()
-       WHERE employee_id = $7 
+       WHERE employee_id = $6 
        RETURNING *`,
       [full_name || null, email || null, phone || null, position || null, role || null, id]
     );

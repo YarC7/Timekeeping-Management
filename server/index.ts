@@ -4,8 +4,9 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import userRoutes from "./routes/user.routes";
 import employeeRoutes from "./routes/employee.routes";
-import employeeImageRoutes from "./routes/employeeImage.routes";
-import attendanceRoutes from "./routes/attendance.routes";
+import timekeepingRoutes from "./routes/timekeeping.routes";
+import attendanceLogRoutes from "./routes/attendanceLog.routes";
+import { EmployeeImageController } from "./controllers/employeeImage.controller.js";
 import { errorHandler } from "./middlewares/errorHandler";
 
 export function createServer() {
@@ -16,12 +17,21 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  app.use(express.json());
-
+  // Core API routes
   app.use("/api/users", userRoutes);
   app.use("/api/employees", employeeRoutes);
-  app.use("/api/images", employeeImageRoutes);
-  app.use("/api/attendances", attendanceRoutes);
+
+  // Match client expectations
+  app.use("/api/timekeeping", timekeepingRoutes);
+  app.use("/api/logs", attendanceLogRoutes);
+
+  // Nested employee image routes used by the client
+  app.get("/api/employees/:id/images", EmployeeImageController.list);
+  app.post("/api/employees/:id/images", ...EmployeeImageController.upload);
+  app.delete(
+    "/api/employees/:id/images/:image_id",
+    EmployeeImageController.remove,
+  );
 
   app.get("/api/demo", handleDemo);
 
