@@ -28,7 +28,6 @@ import {
 import { CalendarRange, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { employeesApi } from "@/api/employees";
 import { useTimekeepingList } from "@/api/timekeeping";
-import { useAttendanceLogs } from "@/api/attendanceLogs";
 import { Link } from "react-router-dom";
 
 function parseTimeToMinutes(s: string | null): number | null {
@@ -59,18 +58,14 @@ export default function AttendanceIndex() {
 
   const { data: employees = [] } = employeesApi.useList();
   const {
-    data: attendances = [],
-    isLoading: tkLoading,
-    isError: tkError,
-    error: tkErr,
-  } = useTimekeepingList({ work_date: format(selectedDate, "yyyy-MM-dd") });
-  // Also fetch recent logs and filter by selected date as fallback/augment
-  const {
     data: logs = [],
     isLoading: logsLoading,
     isError: logsError,
     error: logsErr,
-  } = useAttendanceLogs(1000);
+  } = useTimekeepingList({
+    dateFrom: format(selectedDate, "yyyy-MM-dd"),
+    dateTo: format(selectedDate, "yyyy-MM-dd"),
+  });
 
   type Row = {
     employee_id: string;
@@ -85,8 +80,6 @@ export default function AttendanceIndex() {
 
   const rows: Row[] = useMemo(() => {
     const workDate = format(selectedDate, "yyyy-MM-dd");
-    const byEmpTk: Record<string, any> = {};
-    for (const a of attendances) byEmpTk[a.employee_id] = a;
 
     // Build logs grouped by employee for the selected date
     const logsByEmp: Record<string, any[]> = {};
@@ -131,45 +124,19 @@ export default function AttendanceIndex() {
         e.full_name.toLowerCase().includes(search.trim().toLowerCase())
       )
       .map((e) => {
-        const a = byEmpTk[e.employee_id];
-        let status: Row["status"] = "Absent";
-        let check_in: string | null = null;
-        let check_out: string | null = null;
-        let hours: number | null = null;
-
-        if (a) {
-          if (a.status === "Leave") {
-            status = "Leave";
-          } else if (a.check_in && !a.check_out) {
-            status = "Not-checked-out";
-          } else if (a.check_in) {
-            const mins = parseTimeToMinutes(a.check_in);
-            status = mins != null && mins > 9 * 60 ? "Late" : "Present";
-          }
-          check_in = a.check_in;
-          check_out = a.check_out;
-          hours = a.total_hours;
-        } else {
-          // No timekeeping record for the day, try deriving from logs
-          const derived = deriveFromLogs(e.employee_id);
-          status = derived.status;
-          check_in = derived.check_in;
-          check_out = derived.check_out;
-          hours = derived.hours;
-        }
-
+        const derived = deriveFromLogs(e.employee_id);
         return {
           employee_id: e.employee_id,
           name: e.full_name,
           department: (e as any).department ?? null,
           position: e.position,
-          status,
-          check_in,
-          check_out,
-          hours,
+          status: derived.status,
+          check_in: derived.check_in,
+          check_out: derived.check_out,
+          hours: derived.hours,
         } satisfies Row;
       });
-  }, [attendances, employees, logs, search, selectedDate]);
+  }, [employees, logs, search, selectedDate]);
 
   const kpis = useMemo(() => {
     const agg = {
@@ -293,12 +260,10 @@ export default function AttendanceIndex() {
 
       <Card>
         <CardContent className="pt-4">
-          {tkLoading || logsLoading ? (
+          {logsLoading ? (
             <div>Loading...</div>
-          ) : tkError || logsError ? (
-            <div className="text-red-500">
-              {String(((tkErr as Error)?.message ?? (logsErr as Error)?.message) ?? "Error")}
-            </div>
+          ) : logsError ? (
+            <div className="text-red-500">{String((logsErr as Error)?.message ?? "Error")}</div>
           ) : (
             <Table>
               <TableHeader>

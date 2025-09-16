@@ -1,11 +1,11 @@
 import { pool } from "../config/db.js";
 
 export const FaceModel = {
-  async register({ employee_id, embedding, source }) {
+  async register({ employee_id, embedding, image_url }) {
     const result = await pool.query(
-      `INSERT INTO face_embeddings (employee_id, embedding, source) 
+      `INSERT INTO face_embeddings (employee_id, embedding, image_url) 
        VALUES ($1, $2::jsonb, $3) RETURNING *`,
-      [employee_id, JSON.stringify(embedding), source || "registration"]
+      [employee_id, JSON.stringify(embedding), image_url || "registration"]
     );
     return result.rows[0];
   },

@@ -75,8 +75,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { useDashboard } from "@/api/timekeeping";
-import { useAttendanceLogs } from "@/api/attendanceLogs";
+import { useDashboard, useTimekeepingList } from "@/api/timekeeping";
 import { employeesApi } from "@/api/employees";
 import { DataTable } from "@/components/common/DataTable";
 import {
@@ -138,7 +137,7 @@ export default function Timekeeping() {
     isError: logsError,
     error: logsErr,
     refetch: refetchLogs,
-  } = useAttendanceLogs(500);
+  } = useTimekeepingList();
   const {
     data: employees = [],
     isLoading: empLoading,
@@ -154,9 +153,7 @@ export default function Timekeeping() {
     }
     if (!logsLoading && !empLoading) {
       // Build employee map for quick lookup
-      const empMap = new Map(
-        employees.map((e: any) => [e.employee_id, e])
-      );
+      const empMap = new Map(employees.map((e: any) => [e.employee_id, e]));
 
       // Group logs by employee_id + date (YYYY-MM-DD)
       const groups = new Map<string, any[]>();
@@ -196,7 +193,10 @@ export default function Timekeeping() {
         if (checkInIso && checkOutIso) {
           const diffMs =
             new Date(checkOutIso).getTime() - new Date(checkInIso).getTime();
-          hours = Math.max(0, Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10);
+          hours = Math.max(
+            0,
+            Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10,
+          );
         }
 
         // Derive status
@@ -204,7 +204,8 @@ export default function Timekeeping() {
         if (checkIn && checkOut) {
           // Late if first checkin after 09:00
           const lateThreshold = 9 * 60; // 09:00
-          status = parseMinutes(checkIn) > lateThreshold ? "late" : "checked_out";
+          status =
+            parseMinutes(checkIn) > lateThreshold ? "late" : "checked_out";
         } else if (checkIn && !checkOut) {
           status = "not_checked_out";
         } else if (!checkIn && !checkOut) {

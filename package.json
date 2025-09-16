@@ -22,7 +22,7 @@
     "migrate:make": "knex migrate:make --knexfile knexfile.js",
     "migrate:latest": "knex migrate:latest --knexfile knexfile.js",
     "migrate:rollback": "knex migrate:rollback --knexfile knexfile.js",
-    "seed:run": "knex seed:run --knexfile knexfile.js"
+    "seed": "knex seed:run --knexfile knexfile.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.888.0",

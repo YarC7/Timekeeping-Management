@@ -1,15 +1,13 @@
 import { z } from "zod";
 
 export const timekeepingSchema = z.object({
-  timekeeping_id: z.string().uuid(),
+  log_id: z.number().optional(),
   employee_id: z.string().uuid(),
   work_date: z.string(), // YYYY-MM-DD
-  check_in: z.string().nullable(),
-  check_out: z.string().nullable(),
-  total_hours: z.number().nullable(),
-  status: z.enum(["Present", "Absent", "Late", "Leave", "Not-checked-out"]),
-  created_at: z.string().datetime().optional(),
-  updated_at: z.string().datetime().optional(),
+  check_type: z.enum(["checkin", "checkout"]),
+  timestamp: z.string().datetime(),
+  similarity: z.number().nullable().optional(),
+  success_image: z.string().url().nullable().optional(),
 });
 
-export type Timekeeping = z.infer<typeof timekeepingSchema>;
+export type TimekeepingLog = z.infer<typeof timekeepingSchema>;

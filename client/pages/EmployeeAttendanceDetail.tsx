@@ -202,7 +202,7 @@ export default function EmployeeAttendanceDetail() {
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
-                  <TableRow key={r.timekeeping_id}>
+                  <TableRow key={r.log_id}>
                     <TableCell>{formatDateDisplay(r.work_date)}</TableCell>
                     <TableCell>Standard</TableCell>
                     <TableCell>{formatTimeDisplay(r.check_in)}</TableCell>
