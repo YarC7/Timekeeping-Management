@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, isAuthenticated } from "@/lib/auth";
+import { login } from "@/lib/auth";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,21 +18,33 @@ export default function Index() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  const { isAuthenticated, setAuthToken } = useAuth();
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (isAuthenticated) {
       navigate("/dashboard", { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      login(email.trim());
+    setError(null);
+    try {
+      const user = await login(email.trim(), password);
+      // Sau khi login() đã set accessToken trong memory, đồng bộ Context bằng access token
+      const { getAccessToken } = await import("@/lib/auth");
+      const token = getAccessToken();
+      if (token) setAuthToken(token);
       toast.success("Signed in");
       navigate("/dashboard", { replace: true });
-    }, 600);
+    } catch (err: any) {
+      setError(err.message || "Login failed");
+      toast.error(err.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -98,9 +111,9 @@ export default function Index() {
               >
                 Sign in
               </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Simple auth: any email and password will sign you in.
-              </p>
+              {error && (
+                <p className="text-xs text-red-500 text-center">{error}</p>
+              )}
             </form>
           </CardContent>
         </Card>

@@ -2,6 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+import bcrypt from "bcryptjs";
 export async function seed(knex) {
   // Clear tables (theo thứ tự phụ thuộc)
   await knex("timekeeping").del();
@@ -9,17 +10,23 @@ export async function seed(knex) {
   await knex("employees").del();
   await knex("users").del();
 
+  // Hash password cho user
+  const adminPassword = "admin123";
+  const hrPassword = "hr123";
+  const adminHash = await bcrypt.hash(adminPassword, 10);
+  const hrHash = await bcrypt.hash(hrPassword, 10);
+
   // 1. Users (Admin & HR)
   const [adminUser, hrUser] = await knex("users")
     .insert([
       {
         email: "admin@company.com",
-        password_hash: "hashed_admin_pw", // TODO: bcrypt hash
+        password_hash: adminHash,
         role: "admin",
       },
       {
         email: "hr@company.com",
-        password_hash: "hashed_hr_pw",
+        password_hash: hrHash,
         role: "hr",
       },
     ])

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createApi } from "@/lib/apiClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch, apiFetchRaw } from "@/lib/apiClient";
 
 export const employeeSchema = z.object({
   employee_id: z.string(),
@@ -20,11 +21,9 @@ export function useToggleEmployeeActive() {
 
   return useMutation({
     mutationFn: async (employee_id: string) => {
-      const res = await fetch(`/api/employees/${employee_id}/toggle`, {
+      return apiFetch(`/api/employees/${employee_id}/toggle`, {
         method: "PATCH",
       });
-      if (!res.ok) throw new Error("Failed to update active status");
-      return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employees"] });
@@ -46,10 +45,9 @@ export function useEmployeeFaces(employee_id: string) {
   return useQuery({
     queryKey: ["employeeFaces", employee_id],
     queryFn: async () => {
-      const res = await fetch(`/api/employees/${employee_id}/images`, {
+      const res = await apiFetchRaw(`/api/employees/${employee_id}/images`, {
         cache: "no-store",
       });
-      if (!res.ok) throw new Error("Failed to fetch faces");
       const text = await res.text();
       if (!text) return [];
       let data;
@@ -75,12 +73,10 @@ export function useUploadEmployeeFace(employee_id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (file: FormData) => {
-      const res = await fetch(`/api/employees/${employee_id}/images`, {
+      return apiFetch(`/api/employees/${employee_id}/images`, {
         method: "POST",
         body: file,
       });
-      if (!res.ok) throw new Error("Failed to upload face");
-      return res.json();
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["employeeFaces", employee_id] }),
@@ -92,7 +88,7 @@ export function useUpdateEmployeeFace(employee_id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: { vector_id: string; image_url?: string }) => {
-      const res = await fetch(
+      return apiFetch(
         `/api/employees/${employee_id}/images/${data.vector_id}`,
         {
           method: "PUT",
@@ -100,8 +96,6 @@ export function useUpdateEmployeeFace(employee_id: string) {
           body: JSON.stringify(data),
         },
       );
-      if (!res.ok) throw new Error("Failed to update face embedding");
-      return res.json();
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["employeeFaces", employee_id] }),
@@ -113,14 +107,12 @@ export function useDeleteEmployeeFace(employee_id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vector_id: string) => {
-      const res = await fetch(
+      return apiFetch(
         `/api/employees/${employee_id}/images/${vector_id}`,
         {
           method: "DELETE",
         },
       );
-      if (!res.ok) throw new Error("Failed to delete face");
-      return res.json();
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["employeeFaces", employee_id] }),

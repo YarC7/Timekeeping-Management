@@ -1,26 +1,44 @@
-export type User = { email: string, password: string };
+import { decodeJWT } from "./jwt";
+export function getUser(): { email: string } | null {
+  if (!accessToken) return null;
+  const payload = decodeJWT(accessToken);
+  if (payload?.email) return { email: payload.email };
+  return null;
+}
+let accessToken: string | null = null;
+export function setAccessToken(token: string) {
+  accessToken = token;
+}
+const REFRESH_KEY = "app.auth.refreshToken";
 
-const AUTH_KEY = "app.auth.user";
+export function getAccessToken() {
+  return accessToken;
+}
 
-export function getUser(): User | null {
-  try {
-    const raw = localStorage.getItem(AUTH_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as User;
-  } catch {
-    return null;
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_KEY);
+}
+
+export function isAuthenticated() {
+  return !!accessToken;
+}
+
+export async function login(email: string, password: string) {
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    throw new Error((await res.text()) || "Login failed");
   }
-}
-
-export function isAuthenticated(): boolean {
-  return !!getUser();
-}
-
-export function login(email: string) {
-  const user: User = { email };
-  localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+  const data = await res.json();
+  accessToken = data.accessToken;
+  localStorage.setItem(REFRESH_KEY, data.refreshToken);
+  return data.user;
 }
 
 export function logout() {
-  localStorage.removeItem(AUTH_KEY);
+  accessToken = null;
+  localStorage.removeItem(REFRESH_KEY);
 }

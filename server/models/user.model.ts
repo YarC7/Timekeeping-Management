@@ -1,10 +1,10 @@
 import { pool } from "../config/db";
 
 export const UserModel = {
-  async create({ name, email }) {
+  async create({ email, password_hash, role }) {
     const result = await pool.query(
-      "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *",
-      [name, email]
+      "INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING *",
+      [email, password_hash, role || "admin"],
     );
     return result.rows[0];
   },
@@ -14,25 +14,34 @@ export const UserModel = {
     return result.rows;
   },
 
-  async findById(id) {
-    const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
+  async findById(user_id) {
+    const result = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+      user_id,
+    ]);
     return result.rows[0];
   },
 
-  async update(id, { name, email }) {
+  async findByEmail(email) {
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    return result.rows[0];
+  },
+
+  async update(user_id, { email, password_hash, role }) {
     const result = await pool.query(
       `UPDATE users 
-       SET name = COALESCE($1, name), email = COALESCE($2, email) 
-       WHERE id = $3 RETURNING *`,
-      [name || null, email || null, id]
+       SET email = COALESCE($1, email), password_hash = COALESCE($2, password_hash), role = COALESCE($3, role)
+       WHERE user_id = $4 RETURNING *`,
+      [email || null, password_hash || null, role || null, user_id],
     );
     return result.rows[0];
   },
 
-  async remove(id) {
+  async remove(user_id) {
     const result = await pool.query(
-      "DELETE FROM users WHERE id = $1 RETURNING *",
-      [id]
+      "DELETE FROM users WHERE user_id = $1 RETURNING *",
+      [user_id],
     );
     return result.rows[0];
   },

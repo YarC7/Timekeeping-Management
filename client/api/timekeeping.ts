@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createApi } from "@/lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
 
 // Schema timekeeping log (log-based)
 export const timekeepingSchema = z.object({
@@ -32,9 +33,8 @@ export function useDashboard() {
   return useQuery({
     queryKey: ["timekeeping", "dashboard"],
     queryFn: async () => {
-      const res = await fetch("/api/timekeeping/dashboard");
-      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
-      return dashboardSchema.parse(await res.json());
+      const data = await apiFetch(`/api/timekeeping/dashboard`);
+      return dashboardSchema.parse(data);
     },
   });
 }
@@ -56,9 +56,7 @@ export function useTimekeepingList(params?: {
       if (params?.search) query.append("search", params.search);
 
       const qs = query.toString();
-      const res = await fetch(qs ? `/api/timekeeping?${qs}` : "/api/timekeeping");
-      if (!res.ok) throw new Error("Failed to fetch timekeeping logs");
-
+      const data = await apiFetch(qs ? `/api/timekeeping?${qs}` : "/api/timekeeping");
       return z
         .array(
           timekeepingSchema.extend({
@@ -68,7 +66,7 @@ export function useTimekeepingList(params?: {
             role: z.string(),
           })
         )
-        .parse(await res.json());
+        .parse(data);
     },
   });
 }
@@ -78,13 +76,11 @@ export function useCheckIn() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (employee_id: string) => {
-      const res = await fetch(`/api/timekeeping/checkin/${employee_id}`, {
+      return apiFetch(`/api/timekeeping/checkin/${employee_id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}), // optional similarity, success_image
+        body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error("Failed to check in");
-      return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timekeeping", "list"] });
@@ -98,13 +94,11 @@ export function useCheckOut() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (employee_id: string) => {
-      const res = await fetch(`/api/timekeeping/checkout/${employee_id}`, {
+      return apiFetch(`/api/timekeeping/checkout/${employee_id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}), // optional similarity, success_image
+        body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error("Failed to check out");
-      return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timekeeping", "list"] });
