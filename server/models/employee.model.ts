@@ -1,4 +1,4 @@
-import { pool } from "../config/db.js";
+import { pool } from "../config/db";
 
 export const EmployeeModel = {
   async create({ full_name, email, phone, position, role }) {

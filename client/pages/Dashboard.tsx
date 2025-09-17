@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users,
   CheckCircle2,
+  Clock,
   Clock8,
   CalendarX2,
   PieChart,
@@ -19,19 +20,49 @@ import {
   Download,
   CalendarClock,
 } from "lucide-react";
+import { useDashboard, useTimekeepingList } from "@/api/timekeeping";
+import { employeesApi } from "@/api/employees";
+import { useMemo } from "react";
+import { format } from "date-fns";
 
 export default function Dashboard() {
-  const kpis = [
-    { key: "total", label: "Total Employees", value: 128, icon: Users },
-    { key: "present", label: "Present Today", value: 96, icon: CheckCircle2 },
-    { key: "late", label: "Late Arrivals", value: 7, icon: Clock8 },
-    { key: "leave", label: "On Leave", value: 5, icon: CalendarX2 },
-  ] as const;
+  const { data: dashboardStats } = useDashboard();
+  const { data: employees = [] } = employeesApi.useList();
+  const { data: todayLogs = [] } = useTimekeepingList({
+    dateFrom: format(new Date(), "yyyy-MM-dd"),
+    dateTo: format(new Date(), "yyyy-MM-dd"),
+  });
+
+  const kpis = useMemo(() => {
+    const late = todayLogs.filter((log) => log.status === "Late").length;
+    const onLeave = todayLogs.filter((log) => log.status === "Leave").length;
+
+    return [
+      {
+        key: "total",
+        label: "Total Employees",
+        value: employees.length,
+        icon: Users,
+      },
+      {
+        key: "present",
+        label: "Present Today",
+        value: dashboardStats?.checkedInToday ?? 0,
+        icon: CheckCircle2,
+      },
+      { key: "late", label: "Late Arrivals", value: late, icon: Clock8 },
+      { key: "leave", label: "On Leave", value: onLeave, icon: CalendarX2 },
+    ] as const;
+  }, [dashboardStats, employees, todayLogs]);
 
   const alerts = [
     { title: "Checked in", detail: "John Doe at 08:45", time: "5m ago" },
     { title: "Late arrival", detail: "Anna Smith at 09:15", time: "25m ago" },
-    { title: "Forgot check-out", detail: "David Lee (yesterday)", time: "1h ago" },
+    {
+      title: "Forgot check-out",
+      detail: "David Lee (yesterday)",
+      time: "1h ago",
+    },
     { title: "Leave request", detail: "Maria Garcia (Today)", time: "2h ago" },
   ];
 
@@ -63,7 +94,7 @@ export default function Dashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Attendance Statistics</CardTitle>
-            <CardDescription>Overview of today\'s attendance insights</CardDescription>
+            <CardDescription>Overview of today's attendance insights</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-2">

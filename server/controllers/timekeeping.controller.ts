@@ -1,4 +1,4 @@
-import { TimekeepingModel } from "../models/timekeeping.model.js";
+import { TimekeepingModel } from "../models/timekeeping.model";
 
 export const TimekeepingController = {
   // Lấy danh sách log (có filter query)

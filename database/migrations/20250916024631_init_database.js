@@ -34,7 +34,6 @@ export async function up(knex) {
       .onDelete("CASCADE");
     table.jsonb("embedding").notNullable();
     table.text("image_url");
-    table.text("source");
     table.timestamps(true, true);
   });
 

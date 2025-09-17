@@ -55,7 +55,8 @@ export function useTimekeepingList(params?: {
       if (params?.employee_id) query.append("employee_id", params.employee_id);
       if (params?.search) query.append("search", params.search);
 
-      const res = await fetch(`/api/timekeeping?${query.toString()}`);
+      const qs = query.toString();
+      const res = await fetch(qs ? `/api/timekeeping?${qs}` : "/api/timekeeping");
       if (!res.ok) throw new Error("Failed to fetch timekeeping logs");
 
       return z

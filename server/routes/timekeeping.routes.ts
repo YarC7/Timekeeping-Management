@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { TimekeepingController } from "../controllers/timekeeping.controller.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { TimekeepingController } from "../controllers/timekeeping.controller";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
 
