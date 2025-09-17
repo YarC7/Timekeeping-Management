@@ -18,12 +18,17 @@ export type Employee = {
   // phone: string;
   position: string;
   role: string;
+  is_active: boolean;
   // image: string; // Assuming image is a string URL
 };
 
 const columnHelper = createColumnHelper<Employee>();
 
 const columns = [
+  columnHelper.accessor("employee_id", {
+    header: "ID",
+    cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+  }),
   columnHelper.accessor("full_name", {
     header: "Name",
     cell: (info) => <span className="font-medium">{info.getValue()}</span>,
@@ -31,6 +36,7 @@ const columns = [
   columnHelper.accessor("email", { header: "Email" }),
   columnHelper.accessor("role", { header: "Role" }),
   columnHelper.accessor("position", { header: "Position" }),
+  columnHelper.accessor("is_active", { header: "Activate" }),
   // columnHelper.accessor("phone", { header: "Phone" }),
   // columnHelper.accessor("image", {
   //   header: "Image",

@@ -83,9 +83,11 @@ import {
   type TimekeepingRow,
 } from "@/hooks/useTimekeepingTable";
 import { EditDialog } from "@/components/timekeeping/EditDialog";
+import { LogDetailDialog } from "@/components/timekeeping/LogDetailDialog";
 
 interface Entry {
   id: string;
+  employeeId: string;
   name: string;
   avatar: string;
   date: string; // ISO date
@@ -127,6 +129,8 @@ export default function Timekeeping() {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [view, setView] = useState<"table" | "charts">("table");
   const [editRow, setEditRow] = useState<Entry | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailContext, setDetailContext] = useState<{ entry: Entry; logs: import("@/components/timekeeping/LogDetailDialog").LogDetail[] } | null>(null);
   const [isMd, setIsMd] = useState(false);
 
   const { data: dashboard } = useDashboard();
@@ -214,6 +218,7 @@ export default function Timekeeping() {
 
         entries.push({
           id: `${employee_id}-${date}`,
+          employeeId: String(employee_id),
           name: emp?.full_name ?? employee_id,
           avatar: `https://i.pravatar.cc/40?u=${employee_id}`,
           date,
@@ -315,6 +320,19 @@ export default function Timekeeping() {
     [filtered],
   );
   const { table } = useTimekeepingTable(timekeepingData, {
+    enableSelection: false,
+    showEditDelete: false,
+    onView: (row) => {
+      const entry = rows.find((r) => r.id === row.id);
+      if (entry) {
+        const dayLogs = (logs as any[]).filter((l) => {
+          const d = String(l.timestamp).slice(0, 10);
+          return String(l.employee_id) === entry.employeeId && d === entry.date;
+        });
+        setDetailContext({ entry, logs: dayLogs });
+        setDetailOpen(true);
+      }
+    },
     onEdit: (row) => setEditRow(row as any),
     onDelete: (ids) => handleDeleteRows(ids),
   });
@@ -846,34 +864,7 @@ export default function Timekeeping() {
       {view === "table" ? (
         <Card>
           <CardContent className="pt-4">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="text-sm text-muted-foreground">
-                {table.getSelectedRowModel().rows.length} selected
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => exportSelected("csv")}
-                >
-                  Export selected
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() =>
-                    handleDeleteRows(
-                      table
-                        .getSelectedRowModel()
-                        .rows.map((r) => r.original.id),
-                    )
-                  }
-                  disabled={table.getSelectedRowModel().rows.length === 0}
-                >
-                  Delete selected
-                </Button>
-              </div>
-            </div>
+            {/* Bulk actions hidden for now */}
 
             <DataTable
               table={table}
@@ -885,7 +876,19 @@ export default function Timekeeping() {
         </Card>
       ) : null}
 
-      {/* Edit modal */}
+      {/* Detail modal with success images */}
+      {detailContext ? (
+        <LogDetailDialog
+          open={detailOpen}
+          onOpenChange={(o) => setDetailOpen(o)}
+          employeeName={detailContext.entry.name}
+          employeeId={detailContext.entry.employeeId}
+          date={detailContext.entry.date}
+          logs={detailContext.logs}
+        />
+      ) : null}
+
+      {/* Edit modal (hidden via UI, kept for future) */}
       {editRow ? (
         <EditDialog
           row={editRow as unknown as TimekeepingRow}

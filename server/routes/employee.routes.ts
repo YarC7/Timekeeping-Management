@@ -30,6 +30,7 @@ router.put("/:id/images/:vector_id", asyncHandler(FaceController.update));
 router.delete("/:id/images/:vector_id", asyncHandler(FaceController.remove));
 
 router.put("/:id", validate(updateEmployeeSchema), asyncHandler(EmployeeController.update));
+router.patch("/:id/toggle", asyncHandler(EmployeeController.toggle));
 router.delete("/:id", asyncHandler(EmployeeController.remove));
 
 export default router;

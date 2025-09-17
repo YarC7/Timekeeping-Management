@@ -12,10 +12,18 @@ import { Plus } from "lucide-react";
 import { EmployeeFormDialog } from "@/components/employee/EmployeeFormDialog";
 import { DataTable } from "@/components/common/DataTable";
 import { useEmployeesTable } from "@/hooks/useEmployeesTable";
+import { exportData } from "@/lib/export";
 
 export default function Users() {
   const { table, isLoading, isError, error, globalFilter, setGlobalFilter } =
     useEmployeesTable();
+  // Get all user data for export
+  const allUsers = table
+    .getPrePaginationRowModel()
+    .rows.map((row) => row.original);
+  const handleExport = (format) => {
+    exportData(allUsers, "users", format);
+  };
 
   return (
     <MainLayout title="User Management">
@@ -26,6 +34,12 @@ export default function Users() {
             <CardDescription>Manage members and roles</CardDescription>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => handleExport("csv")}>
+              Export CSV
+            </Button>
+            <Button variant="outline" onClick={() => handleExport("json")}>
+              Export JSON
+            </Button>
             <Input
               placeholder="Search..."
               value={globalFilter ?? ""}

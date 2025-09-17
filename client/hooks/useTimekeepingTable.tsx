@@ -32,8 +32,11 @@ export type TimekeepingRow = {
 };
 
 export type UseTimekeepingTableOptions = {
+  onView?: (row: TimekeepingRow) => void;
   onEdit?: (row: TimekeepingRow) => void;
   onDelete?: (ids: string[]) => void;
+  enableSelection?: boolean; // default false for safer view mode
+  showEditDelete?: boolean; // default false
 };
 
 const columnHelper = createColumnHelper<TimekeepingRow>();
@@ -46,6 +49,9 @@ export function useTimekeepingTable(
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 10 });
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
+  const enableSelection = options?.enableSelection ?? false;
+  const showEditDelete = options?.showEditDelete ?? false;
 
   const statusBadge = (s: TimekeepingRow["status"]) => {
     switch (s) {
@@ -92,37 +98,42 @@ export function useTimekeepingTable(
     return `${hh}:${mm}`;
   };
 
-  const columns = React.useMemo(
-    () => [
-      // Selection column
-      columnHelper.display({
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={table.getToggleAllPageRowsSelectedHandler()}
-            aria-label="Select all"
-            data-state={
-              table.getIsSomePageRowsSelected()
-                ? "indeterminate"
-                : table.getIsAllPageRowsSelected()
-                  ? "checked"
-                  : "unchecked"
-            }
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={row.getToggleSelectedHandler()}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-        size: 48,
-      }),
-      // Name with avatar
+  const columns = React.useMemo(() => {
+    const cols: any[] = [];
+
+    if (enableSelection) {
+      cols.push(
+        columnHelper.display({
+          id: "select",
+          header: ({ table }) => (
+            <Checkbox
+              checked={table.getIsAllPageRowsSelected()}
+              onCheckedChange={table.getToggleAllPageRowsSelectedHandler()}
+              aria-label="Select all"
+              data-state={
+                table.getIsSomePageRowsSelected()
+                  ? "indeterminate"
+                  : table.getIsAllPageRowsSelected()
+                    ? "checked"
+                    : "unchecked"
+              }
+            />
+          ),
+          cell: ({ row }) => (
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={row.getToggleSelectedHandler()}
+              aria-label="Select row"
+            />
+          ),
+          enableSorting: false,
+          enableHiding: false,
+          size: 48,
+        }),
+      );
+    }
+
+    cols.push(
       columnHelper.accessor("name", {
         header: "Employee",
         cell: ({ row }) => (
@@ -136,6 +147,9 @@ export function useTimekeepingTable(
           </div>
         ),
       }),
+    );
+
+    cols.push(
       columnHelper.accessor((row) => {
         const t = new Date(row.date).getTime();
         return Number.isFinite(t) ? t : 0;
@@ -144,48 +158,73 @@ export function useTimekeepingTable(
         header: "Date",
         cell: ({ row }) => formatDateDisplay(row.original.date),
       }),
+    );
+
+    cols.push(
       columnHelper.accessor((row) => parseTimeToMinutes(row.checkIn) ?? -1, {
         id: "checkIn",
         header: "Check-in",
         cell: ({ row }) => formatTimeDisplay(row.original.checkIn),
       }),
+    );
+
+    cols.push(
       columnHelper.accessor((row) => parseTimeToMinutes(row.checkOut) ?? -1, {
         id: "checkOut",
         header: "Check-out",
         cell: ({ row }) => formatTimeDisplay(row.original.checkOut),
       }),
+    );
+
+    cols.push(
       columnHelper.accessor("hours", {
         header: "Total Hours",
         cell: ({ getValue }) => (getValue() ?? "-") as any,
       }),
+    );
+
+    cols.push(
       columnHelper.accessor("status", {
         header: "Status",
         enableSorting: false,
         cell: ({ getValue }) => statusBadge(getValue()),
       }),
+    );
+
+    cols.push(
       columnHelper.display({
         id: "actions",
         header: "",
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => options?.onEdit?.(row.original)}>
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-600"
-              onClick={() => options?.onDelete?.([row.original.id])}
-            >
-              Delete
-            </Button>
+            {options?.onView ? (
+              <Button variant="ghost" size="sm" onClick={() => options?.onView?.(row.original)}>
+                View
+              </Button>
+            ) : null}
+            {showEditDelete && options?.onEdit ? (
+              <Button variant="ghost" size="sm" onClick={() => options?.onEdit?.(row.original)}>
+                Edit
+              </Button>
+            ) : null}
+            {showEditDelete && options?.onDelete ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600"
+                onClick={() => options?.onDelete?.([row.original.id])}
+              >
+                Delete
+              </Button>
+            ) : null}
           </div>
         ),
         enableSorting: false,
       }),
-    ],
-    [options],
-  );
+    );
+
+    return cols;
+  }, [enableSelection, showEditDelete, options]);
 
   const table = useReactTable({
     data,
@@ -199,7 +238,7 @@ export function useTimekeepingTable(
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    enableRowSelection: true,
+    enableRowSelection: enableSelection,
   });
 
   return {

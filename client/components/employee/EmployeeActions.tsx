@@ -6,9 +6,16 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, ScanFaceIcon, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  ScanFaceIcon,
+  Trash2,
+  UserRoundCheck,
+  UserRoundX,
+} from "lucide-react";
 import { EmployeeFormDialog } from "./EmployeeFormDialog";
-import { employeesApi } from "@/api/employees";
+import { employeesApi, useToggleEmployeeActive } from "@/api/employees";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -24,6 +31,7 @@ import { FaceImageDialog } from "./FaceImageDialog";
 
 export function EmployeeActions({ employee }) {
   const deleteEmployee = employeesApi.useDelete();
+  const toggleEmployee = useToggleEmployeeActive();
 
   const handleDelete = () => {
     deleteEmployee.mutate(employee.employee_id, {
@@ -32,6 +40,15 @@ export function EmployeeActions({ employee }) {
         toast.error(err.message || "Failed to delete employee ❌"),
     });
   };
+
+  const handleToggleActive = () => {
+    toggleEmployee.mutate(employee.employee_id, {
+      onSuccess: () => toast.success("Employee status updated"),
+      onError: (err: any) =>
+        toast.error(err.message || "Failed to update employee status ��"),
+    });
+  };
+    
 
   return (
     <DropdownMenu>
@@ -58,6 +75,7 @@ export function EmployeeActions({ employee }) {
           }
         />
         <DropdownMenuSeparator className="my-1" />
+
         {/* Edit */}
         <EmployeeFormDialog
           mode="edit"
@@ -80,10 +98,49 @@ export function EmployeeActions({ employee }) {
         />
         <DropdownMenuSeparator className="my-1" />
 
+        {/* DE/ACTIVE */}
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <DropdownMenuItem
+              className="text-slate-600 focus:text-slate-600"
+              onSelect={(e) => e.preventDefault()}
+            >
+              {employee.is_active ? (
+                <UserRoundCheck className="w-4 h-4 mr-2" />
+              ) : (
+                <UserRoundX className="w-4 h-4 mr-2" />
+              )}
+              {employee.is_active ? "Deactivate" : "Activate"}
+            </DropdownMenuItem>
+          </AlertDialogTrigger>
+
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {employee.is_active
+                  ? `Are you sure you want to deactivate ${employee.full_name}?`
+                  : `Are you sure you want to activate ${employee.full_name}?`}
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleToggleActive}
+              >
+                {employee.is_active ? "Deactivate" : "Activate"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <DropdownMenuSeparator className="my-1" />
+
         {/* Delete */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <DropdownMenuItem className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600"
+              onSelect={(e) => e.preventDefault()}
+            >
               <Trash2 className="w-4 h-4 mr-2" /> Delete
             </DropdownMenuItem>
           </AlertDialogTrigger>

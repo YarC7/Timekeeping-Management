@@ -23,6 +23,20 @@ export const EmployeeController = {
     res.json(employee);
   },
 
+  async toggle(req, res, next) {
+    try {
+      const employee = await EmployeeModel.toggle(req.params.id);
+
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      res.json(employee);
+    } catch (err) {
+      next(err); // chuyển qua error handler middleware
+    }
+  },
+
   async remove(req, res) {
     const employee = await EmployeeModel.remove(req.params.id);
     if (!employee) throw { status: 404, message: "Employee not found" };

@@ -8,12 +8,29 @@ export const employeeSchema = z.object({
   email: z.string().email(),
   phone: z.string(),
   position: z.string(),
+  is_active: z.boolean(),
   role: z.enum(["employee", "manager", "hr"]).default("employee"),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
 });
 
 export const employeesApi = createApi("employees", employeeSchema);
+export function useToggleEmployeeActive() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (employee_id: string) => {
+      const res = await fetch(`/api/employees/${employee_id}/toggle`, {
+        method: "PATCH",
+      });
+      if (!res.ok) throw new Error("Failed to update active status");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["employees"] });
+    },
+  });
+}
 
 export const faceSchema = z.object({
   vector_id: z.string().uuid(),
@@ -74,10 +91,7 @@ export function useUploadEmployeeFace(employee_id: string) {
 export function useUpdateEmployeeFace(employee_id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: {
-      vector_id: string;
-      image_url?: string;
-    }) => {
+    mutationFn: async (data: { vector_id: string; image_url?: string }) => {
       const res = await fetch(
         `/api/employees/${employee_id}/images/${data.vector_id}`,
         {

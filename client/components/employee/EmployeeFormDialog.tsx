@@ -24,6 +24,7 @@ import { employeesApi } from "@/api/employees";
 import { toast } from "sonner";
 
 const schema = z.object({
+  employee_id: z.string(),
   full_name: z.string().min(1, "Full name is required"),
   email: z.string().email("Invalid email"),
   phone: z.string().min(8, "Phone must have at least 8 digits"),
@@ -55,6 +56,7 @@ export function EmployeeFormDialog({ mode, defaultValues, trigger }: Props) {
   } = useForm<EmployeeFormData>({
     resolver: zodResolver(schema),
     defaultValues: defaultValues || {
+      employee_id: "",
       full_name: "",
       email: "",
       phone: "",
@@ -93,6 +95,13 @@ export function EmployeeFormDialog({ mode, defaultValues, trigger }: Props) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <Label htmlFor="employee_id">Employee ID</Label>
+            <Input id="employee_id" {...register("employee_id")} />
+            {errors.employee_id && (
+              <p className="text-red-500">{errors.employee_id.message}</p>
+            )}
+          </div>
           <div>
             <Label htmlFor="full_name">Full Name</Label>
             <Input id="full_name" {...register("full_name")} />
