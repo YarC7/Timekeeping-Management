@@ -12,8 +12,8 @@ router.get("/", asyncHandler(TimekeepingController.list));
 router.get("/:id", asyncHandler(TimekeepingController.get));
 
 // ⏱️ Check-in / Check-out
-router.post("/checkin/:employee_id", asyncHandler(TimekeepingController.checkIn));
-router.post("/checkout/:employee_id", asyncHandler(TimekeepingController.checkOut));
+router.post("/logs", asyncHandler(TimekeepingController.logTimekeeping));
+
 
 // ❌ Xóa log
 router.delete("/:id", asyncHandler(TimekeepingController.remove));

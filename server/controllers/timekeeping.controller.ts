@@ -14,28 +14,25 @@ export const TimekeepingController = {
     res.json(record);
   },
 
-  // Check-in
-  async checkIn(req, res) {
-    const log = await TimekeepingModel.create({
-      employee_id: req.params.employee_id,
-      check_type: "checkin",
-      similarity: req.body.similarity,
-      success_image: req.body.success_image,
-    });
-    res.json(log);
-  },
+  async logTimekeeping(req, res) {
+    try {
+      const { employee_id, similarity, success_image } = req.body;
 
-  // Check-out
-  async checkOut(req, res) {
-    const log = await TimekeepingModel.create({
-      employee_id: req.params.employee_id,
-      check_type: "checkout",
-      similarity: req.body.similarity,
-      success_image: req.body.success_image,
-    });
-    res.json(log);
-  },
+      if (!employee_id) {
+        return res.status(400).json({ error: "employee_id is required" });
+      }
 
+      const log = await TimekeepingModel.create({
+        employee_id,
+        similarity,
+        success_image,
+      });
+
+      res.status(201).json(log);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  },
   // Xóa log
   async remove(req, res) {
     const record = await TimekeepingModel.remove(Number(req.params.id));

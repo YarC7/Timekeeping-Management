@@ -1,0 +1,55 @@
+{
+  "info": {
+    "name": "Face Recognition Timekeeping API",
+    "_postman_id": "f9b2e1a3-1234-5678-9abc-1234567890de",
+    "description": "Public APIs for PC + Camera with environment variables",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Employee by ID",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/employees/{{employeeId}}"
+      }
+    },
+    {
+      "name": "Register Face Embedding for Employee",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"embedding\": [0.123, -0.442, 0.982, 0.556],\n  \"image_url\": \"http://camera.local/images/{{employeeId}}.jpg\"\n}"
+        },
+        "url": "{{baseUrl}}/employees/{{employeeId}}/images"
+      }
+    },
+    {
+      "name": "Get Employee Face Embeddings",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/employees/{{employeeId}}/images"
+      }
+    },
+    {
+      "name": "Get All Employees Face Embeddings",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/employees/images"
+      }
+    },
+    {
+      "name": "Create Timekeeping Log (Checkin/Checkout)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"employee_id\": \"{{employeeId}}\",\n  \"similarity\": 0.95,\n  \"success_image\": \"http://camera.local/capture/{{employeeId}}_20250918_0900.jpg\"\n}"
+        },
+        "url": "{{baseUrl}}/timekeeping/logs"
+      }
+    }
+  ]
+}

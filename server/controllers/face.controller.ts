@@ -3,19 +3,30 @@ import { FaceModel } from "../models/face.model";
 
 export const FaceController = {
   async register(req: Request, res: Response) {
-    const employee_id = req.params.id;
-    // Multer sets req.file when uploading; also allow direct image_url
-    const file = (req as any).file as Express.Multer.File | undefined;
-    const body = req.body as { image_url?: string;};
+    try {
+      const employee_id = req.params.id;
+      const body = req.body as { embedding: number[] };
 
-    const image_url = file ? `/uploads/${file.filename}` : body.image_url ?? null;
+      if (!body.embedding || !Array.isArray(body.embedding)) {
+        return res.status(400).json({ error: "Embedding is required" });
+      }
 
-    const face = await FaceModel.register({
-      employee_id,
-      embedding: [], // placeholder embedding; real embedding generation would happen elsewhere
-      image_url,
-    });
-    res.json(face);
+      const face = await FaceModel.register({
+        employee_id,
+        embedding: body.embedding,
+        image_url: null, // không cần ảnh nếu PC chỉ gửi embedding
+      });
+
+      res.status(201).json(face);
+    } catch (err: any) {
+      console.error("Register face error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  async getAllImages(req: Request, res: Response) {
+    const embeddings = await FaceModel.getAll();
+    res.json(embeddings);
   },
 
   async getByEmployee(req: Request, res: Response) {

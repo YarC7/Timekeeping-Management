@@ -1,6 +1,13 @@
 import { pool } from "../config/db";
 
 export const FaceModel = {
+  async getAll() {
+    const res = await pool.query(
+      "SELECT * FROM face_embeddings ORDER BY vector_id DESC",
+    );
+    return res.rows;
+  },
+
   async register({
     employee_id,
     embedding,
@@ -12,7 +19,7 @@ export const FaceModel = {
   }) {
     const result = await pool.query(
       `INSERT INTO face_embeddings (employee_id, embedding, image_url)
-       VALUES ($1, $2::jsonb, $3, $4) RETURNING *`,
+       VALUES ($1, $2::jsonb, $3) RETURNING *`,
       [employee_id, JSON.stringify(embedding ?? []), image_url ?? null],
     );
     return result.rows[0];
@@ -31,7 +38,7 @@ export const FaceModel = {
 
   async update(
     vector_id: string,
-    { image_url }: { image_url?: string  | null },
+    { image_url }: { image_url?: string | null },
   ) {
     const result = await pool.query(
       `UPDATE face_embeddings

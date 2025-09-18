@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: timekeeping-app
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+      # Giả sử DB của bạn chạy sẵn ở host
+      DATABASE_URL: postgres://user:password@host:5432/dbname
+    env_file:
+      - .env

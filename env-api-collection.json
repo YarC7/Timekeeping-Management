@@ -1,0 +1,16 @@
+{
+  "id": "12345678-abcd-efgh-ijkl-9876543210ab",
+  "name": "FaceTime-Env",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "enabled": true
+    },
+    {
+      "key": "employeeId",
+      "value": "HP001",
+      "enabled": true
+    }
+  ]
+}

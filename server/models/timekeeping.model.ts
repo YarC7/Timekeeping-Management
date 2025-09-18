@@ -16,6 +16,22 @@ export const TimekeepingModel = {
     return res.rows[0];
   },
 
+  async findOne(where: { employee_id: string; work_date?: string }) {
+    const { employee_id, work_date } = where;
+    let query = `SELECT * FROM timekeeping WHERE employee_id = $1`;
+    const params: any[] = [employee_id];
+
+    if (work_date) {
+      params.push(work_date);
+      query += ` AND work_date = $2`;
+    }
+
+    query += ` ORDER BY timestamp DESC LIMIT 1`;
+
+    const res = await pool.query(query, params);
+    return res.rows[0];
+  },
+
   async findByDate(employee_id: string, work_date: string) {
     const res = await pool.query(
       "SELECT * FROM timekeeping WHERE employee_id = $1 AND work_date = $2 ORDER BY timestamp ASC",
@@ -24,18 +40,44 @@ export const TimekeepingModel = {
     return res.rows;
   },
 
+  // 👉 Auto decide checkin / checkout
   async create(data: {
     employee_id: string;
-    check_type: "checkin" | "checkout";
     similarity?: number;
     success_image?: string;
   }) {
-    const { employee_id, check_type, similarity, success_image } = data;
+    const { employee_id, similarity, success_image } = data;
+
+    // Tìm log gần nhất trong ngày
+    const todayLogs = await pool.query(
+      `
+      SELECT * FROM timekeeping
+      WHERE employee_id = $1 AND work_date = CURRENT_DATE
+      ORDER BY timestamp ASC
+      `,
+      [employee_id],
+    );
+
+    let check_type: "checkin" | "checkout" = "checkin";
+
+    if (todayLogs.rows.length > 0) {
+      const last = todayLogs.rows[todayLogs.rows.length - 1];
+
+      if (last.check_type === "checkin") {
+        // Nếu đã có checkin -> cho checkout
+        check_type = "checkout";
+      } else if (last.check_type === "checkout") {
+        // Nếu đã có checkout -> không cho thêm nữa
+        throw new Error("Employee has already checked out today");
+      }
+    }
+
     const res = await pool.query(
       `INSERT INTO timekeeping (employee_id, work_date, check_type, timestamp, similarity, success_image)
        VALUES ($1, CURRENT_DATE, $2, NOW(), $3, $4) RETURNING *`,
       [employee_id, check_type, similarity, success_image],
     );
+
     return res.rows[0];
   },
 
@@ -127,14 +169,12 @@ export const TimekeepingModel = {
       Number(totalEmployees.rows[0].count) -
       Number(checkinsToday.rows[0].count);
 
-    // Tổng giờ trong tuần (dùng MIN checkin, MAX checkout)
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-    // Fix: Use subquery to avoid nested aggregate
     const totalHoursThisWeek = await pool.query(
       `
       SELECT COALESCE(SUM(hours), 0) AS total FROM (
@@ -143,7 +183,7 @@ export const TimekeepingModel = {
                                  MIN(CASE WHEN check_type='checkin' THEN timestamp END))) / 3600 AS hours
         FROM timekeeping
         WHERE work_date BETWEEN $1 AND $2
-        GROUP BY employee_id
+        GROUP BY employee_id, work_date
       ) t
       `,
       [
@@ -156,10 +196,7 @@ export const TimekeepingModel = {
       checkedInToday: Number(checkinsToday.rows[0]?.count || 0),
       checkedOutToday: Number(checkoutsToday.rows[0]?.count || 0),
       notCheckedInToday,
-      totalHoursThisWeek: totalHoursThisWeek.rows.reduce(
-        (acc, row) => acc + Number(row.total),
-        0,
-      ),
+      totalHoursThisWeek: Number(totalHoursThisWeek.rows[0]?.total || 0),
     };
   },
 };
