@@ -31,6 +31,7 @@ export function createServer() {
     { path: "/employees/:id/images", method: "GET" }, //get face image for employee by id
     { path: "/employees/images", method: "GET" }, //get all face images for employees
     { path: "/timekeeping/logs", method: "POST" }, //create timekeeping log for employee
+    { path: "/timekeeping/logging", method: "POST" }, //create timekeeping log for employee
   ];
 
   function isPublicRoute(req) {

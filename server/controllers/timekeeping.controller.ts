@@ -40,6 +40,33 @@ export const TimekeepingController = {
     res.json({ message: "Deleted successfully" });
   },
 
+  async logTimekeepingWithType(req, res) {
+    try {
+      const { employee_id, check_type, similarity, success_image } = req.body;
+
+      // Validate input
+      if (!employee_id) {
+        return res.status(400).json({ error: "employee_id is required" });
+      }
+      if (!check_type || !["checkin", "checkout"].includes(check_type)) {
+        return res
+          .status(400)
+          .json({ error: "check_type must be 'checkin' or 'checkout'" });
+      }
+
+      const log = await TimekeepingModel.createWithType({
+        employee_id,
+        check_type,
+        similarity,
+        success_image,
+      });
+
+      res.status(201).json(log);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+
   // Dashboard stats
   async dashboard(req, res) {
     const stats = await TimekeepingModel.dashboardStats();

@@ -81,6 +81,66 @@ export const TimekeepingModel = {
     return res.rows[0];
   },
 
+  async createWithType(data: {
+    employee_id: string;
+    check_type: "checkin" | "checkout";
+    similarity?: number;
+    success_image?: string;
+  }) {
+    const { employee_id, check_type, similarity, success_image } = data;
+
+    // Lấy log hôm nay của employee
+    const todayLogs = await pool.query(
+      `
+    SELECT * FROM timekeeping
+    WHERE employee_id = $1 AND work_date = CURRENT_DATE
+    ORDER BY timestamp ASC
+    `,
+      [employee_id],
+    );
+
+    if (check_type === "checkin") {
+      // Nếu đã có checkin thì không cho thêm nữa
+      const hasCheckin = todayLogs.rows.some(
+        (row) => row.check_type === "checkin",
+      );
+      if (hasCheckin) {
+        throw new Error("Employee already checked in today");
+      }
+    }
+
+    if (check_type === "checkout") {
+      // Chỉ cho checkout nếu có checkin trước đó
+      const hasCheckin = todayLogs.rows.some(
+        (row) => row.check_type === "checkin",
+      );
+      if (!hasCheckin) {
+        throw new Error("Employee cannot checkout without checkin first");
+      }
+
+      // Nếu đã checkout rồi thì cấm thêm lần nữa
+      const hasCheckout = todayLogs.rows.some(
+        (row) => row.check_type === "checkout",
+      );
+      if (hasCheckout) {
+        throw new Error("Employee has already checked out today");
+      }
+    }
+
+    // Insert log
+    const res = await pool.query(
+      `
+    INSERT INTO timekeeping 
+      (employee_id, work_date, check_type, timestamp, similarity, success_image)
+    VALUES ($1, CURRENT_DATE, $2, NOW(), $3, $4)
+    RETURNING *
+    `,
+      [employee_id, check_type, similarity, success_image],
+    );
+
+    return res.rows[0];
+  },
+
   async remove(id: number) {
     const res = await pool.query(
       "DELETE FROM timekeeping WHERE log_id = $1 RETURNING *",

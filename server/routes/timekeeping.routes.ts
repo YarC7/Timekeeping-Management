@@ -13,6 +13,7 @@ router.get("/:id", asyncHandler(TimekeepingController.get));
 
 // ⏱️ Check-in / Check-out
 router.post("/logs", asyncHandler(TimekeepingController.logTimekeeping));
+router.post("/logging", asyncHandler(TimekeepingController.logTimekeepingWithType));
 
 
 // ❌ Xóa log

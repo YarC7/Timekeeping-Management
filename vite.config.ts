@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => ({
       allow: ["./client", "index.html", "./shared"],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
     },
+    allowedHosts: ["localhost", "127.0.0.1", "4a8096812a0a.ngrok-free.app"],
   },
   build: {
     outDir: "dist/spa",

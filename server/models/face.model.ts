@@ -19,10 +19,20 @@ export const FaceModel = {
   }) {
     const result = await pool.query(
       `INSERT INTO face_embeddings (employee_id, embedding, image_url)
-       VALUES ($1, $2::jsonb, $3) RETURNING *`,
+       VALUES ($1, $2::jsonb, $3)
+       RETURNING *`,
       [employee_id, JSON.stringify(embedding ?? []), image_url ?? null],
     );
-    return result.rows[0];
+    const face = result.rows[0];
+    // Lấy tên employee
+    const empRes = await pool.query(
+      "SELECT full_name FROM employees WHERE employee_id = $1",
+      [employee_id],
+    );
+    return {
+      ...face,
+      employee_name: empRes.rows[0]?.full_name ?? null,
+    };
   },
 
   async findByEmployee(employee_id: string) {
